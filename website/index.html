@@ -4,66 +4,116 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Friseursalon am Gutshof – Kathleen Welisch – Lauchhammer</title>
+  <meta name="description" content="Friseursalon am Gutshof in Lauchhammer-West – Inh. Kathleen Welisch. Haarschnitt, Coloration, Brautfrisuren, Nageldesign, Kosmetik & mehr. Tel: 03574 464485" />
+  <meta name="keywords" content="Friseur Lauchhammer, Friseursalon Lauchhammer, Kathleen Welisch, Am Gutshof, Haarschnitt, Coloration, Brautfrisur, Nageldesign" />
+  <meta name="robots" content="index, follow" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Friseursalon am Gutshof – Kathleen Welisch" />
+  <meta property="og:description" content="Ihr Friseur in Lauchhammer-West. Haarschnitt, Coloration, Brautfrisuren, Nageldesign, Kosmetik & Fußpflege." />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="de_DE" />
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "HairSalon",
+    "name": "Friseursalon am Gutshof",
+    "description": "Friseursalon in Lauchhammer-West – Haarschnitt, Coloration, Brautfrisuren, Nageldesign, Kosmetik, Fußpflege und mehr.",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "Dimitroffstraße 2",
+      "addressLocality": "Lauchhammer",
+      "addressRegion": "Brandenburg",
+      "postalCode": "01979",
+      "addressCountry": "DE"
+    },
+    "telephone": "+4903574464485",
+    "openingHours": ["Mo-Fr 08:00-19:00", "Sa 08:00-13:00"],
+    "priceRange": "€€"
+  }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet" />
+
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
   <!-- Navigation -->
-  <header>
+  <header id="header">
     <nav class="navbar">
       <div class="logo">
         <span class="scissors">✂</span> Friseursalon am Gutshof
       </div>
-      <ul class="nav-links">
+      <ul class="nav-links" id="nav-links">
         <li><a href="#home">Start</a></li>
         <li><a href="#leistungen">Leistungen</a></li>
         <li><a href="#ueber-uns">Über uns</a></li>
+        <li><a href="#oeffnungszeiten">Öffnungszeiten</a></li>
         <li><a href="#kontakt">Kontakt</a></li>
+        <li><a href="tel:+4903574464485" class="nav-tel">✆ 03574 464485</a></li>
       </ul>
+      <button class="burger" id="burger" aria-label="Menü öffnen">
+        <span></span><span></span><span></span>
+      </button>
     </nav>
   </header>
 
   <!-- Hero -->
   <section id="home" class="hero">
-    <div class="hero-content">
+    <div class="hero-content fade-in">
+      <p class="hero-label">Willkommen in Lauchhammer-West</p>
       <h1>Friseursalon<br><span>am Gutshof</span></h1>
-      <p>Ihr Friseur in Lauchhammer – für Schönheit, Stil und Wohlgefühl</p>
-      <a href="#kontakt" class="btn">Termin vereinbaren</a>
+      <p class="hero-sub">Ihr Friseur für Schönheit, Stil und Wohlgefühl –<br>seit Jahren Ihr Vertrauen wert.</p>
+      <div class="hero-btns">
+        <a href="tel:+4903574464485" class="btn">✆ Jetzt anrufen</a>
+        <a href="#leistungen" class="btn btn-outline">Unsere Leistungen</a>
+      </div>
+    </div>
+    <div class="hero-wave">
+      <svg viewBox="0 0 1440 80" preserveAspectRatio="none"><path d="M0,40 C360,80 1080,0 1440,40 L1440,80 L0,80 Z" fill="#ffffff"/></svg>
     </div>
   </section>
 
   <!-- Leistungen -->
   <section id="leistungen" class="leistungen">
     <div class="container">
-      <h2>Unsere Leistungen</h2>
-      <p class="subtitle">Wir bieten ein breites Spektrum an Friseurdienstleistungen</p>
+      <div class="section-header">
+        <h2>Unsere Leistungen</h2>
+        <p class="subtitle">Alles für Ihr Wohlbefinden – unter einem Dach</p>
+      </div>
       <div class="cards">
-        <div class="card">
+        <div class="card reveal">
           <div class="card-icon">✂</div>
           <h3>Haarschnitt & Trendfrisuren</h3>
           <p>Präzise Schnitte für Damen, Herren und Kinder – immer nach dem neuesten Trend.</p>
         </div>
-        <div class="card">
+        <div class="card reveal">
           <div class="card-icon">🎨</div>
           <h3>Coloration & Strähnen</h3>
           <p>Farbe, Highlights, Balayage – wir bringen Ihr Haar zum Strahlen.</p>
         </div>
-        <div class="card">
+        <div class="card reveal">
           <div class="card-icon">💍</div>
           <h3>Braut- & Festfrisuren</h3>
           <p>Unvergessliche Frisuren für Ihren besonderen Tag – professionell und stilvoll.</p>
         </div>
-        <div class="card">
+        <div class="card reveal">
           <div class="card-icon">💅</div>
           <h3>Nageldesign</h3>
           <p>Gepflegte Nägel für jeden Anlass – von klassisch bis kreativ.</p>
         </div>
-        <div class="card">
+        <div class="card reveal">
           <div class="card-icon">🌸</div>
           <h3>Kosmetik & Fußpflege</h3>
           <p>Professionelle Kosmetikbehandlungen und Fußpflege für Ihr Wohlbefinden.</p>
         </div>
-        <div class="card">
+        <div class="card reveal">
           <div class="card-icon">💆</div>
           <h3>Massage & Haarverlängerung</h3>
           <p>Entspannende Massagen und professionelle Haarverlängerungen.</p>
@@ -75,8 +125,10 @@
   <!-- Über uns -->
   <section id="ueber-uns" class="ueber-uns">
     <div class="container ueber-grid">
-      <div class="ueber-text">
-        <h2>Über uns</h2>
+      <div class="ueber-text reveal">
+        <div class="section-header left">
+          <h2>Über uns</h2>
+        </div>
         <p>
           Willkommen im Friseursalon „Am Gutshof" in Lauchhammer! Ich bin Kathleen Welisch,
           leidenschaftliche Friseurmeisterin mit langjähriger Erfahrung und einem Gespür für
@@ -88,38 +140,57 @@
           zu verstehen und das Beste aus Ihrem Haar herauszuholen.
         </p>
         <p>
-          Qualität, Sorgfalt und Ihr Wohlbefinden stehen bei uns an erster Stelle – denn Sie
-          verdienen das Beste.
+          Qualität, Sorgfalt und Ihr Wohlbefinden stehen bei uns an erster Stelle –
+          denn Sie verdienen das Beste.
         </p>
+        <a href="tel:+4903574464485" class="btn" style="margin-top:24px">✆ 03574 464485</a>
       </div>
-      <div class="ueber-bild">
+      <div class="ueber-bild reveal">
         <div class="bild-placeholder">
           <span>✂</span>
           <p>Kathleen Welisch</p>
-          <small>Friseurmeisterin</small>
+          <small>Friseurmeisterin · Lauchhammer</small>
         </div>
       </div>
     </div>
   </section>
 
   <!-- Öffnungszeiten -->
-  <section class="oeffnungszeiten">
+  <section id="oeffnungszeiten" class="oeffnungszeiten">
     <div class="container">
-      <h2>Öffnungszeiten</h2>
-      <table>
-        <tr><td>Montag – Freitag</td><td>08:00 – 19:00 Uhr</td></tr>
-        <tr><td>Samstag</td><td>08:00 – 13:00 Uhr</td></tr>
-        <tr><td>Sonntag</td><td>Geschlossen</td></tr>
-      </table>
+      <div class="section-header">
+        <h2>Öffnungszeiten</h2>
+      </div>
+      <div class="oz-grid">
+        <div class="oz-card">
+          <div class="oz-icon">🗓</div>
+          <h3>Montag – Freitag</h3>
+          <p>08:00 – 19:00 Uhr</p>
+        </div>
+        <div class="oz-card">
+          <div class="oz-icon">🗓</div>
+          <h3>Samstag</h3>
+          <p>08:00 – 13:00 Uhr</p>
+        </div>
+        <div class="oz-card closed">
+          <div class="oz-icon">💤</div>
+          <h3>Sonntag</h3>
+          <p>Geschlossen</p>
+        </div>
+      </div>
+      <p class="oz-hinweis">Termine nach Vereinbarung möglich – rufen Sie uns an!</p>
     </div>
   </section>
 
   <!-- Kontakt -->
   <section id="kontakt" class="kontakt">
     <div class="container">
-      <h2>Kontakt & Anfahrt</h2>
+      <div class="section-header">
+        <h2>Kontakt & Anfahrt</h2>
+        <p class="subtitle">Wir freuen uns auf Ihren Besuch</p>
+      </div>
       <div class="kontakt-grid">
-        <div class="kontakt-info">
+        <div class="kontakt-info reveal">
           <h3>Adresse</h3>
           <p>Friseursalon „Am Gutshof"<br>Inh. Kathleen Welisch<br>Dimitroffstraße 2<br>01979 Lauchhammer-West</p>
 
@@ -129,19 +200,21 @@
           <h3>Zahlung</h3>
           <p>Bar &amp; Electronic Cash</p>
 
-          <h3>Termin</h3>
-          <p>Rufen Sie uns an – wir freuen uns auf Sie!</p>
-          <a href="tel:+4903574464485" class="btn">Jetzt anrufen</a>
+          <a href="tel:+4903574464485" class="btn" style="margin-top:24px">✆ Jetzt anrufen</a>
         </div>
-        <div class="kontakt-formular">
-          <h3>Nachricht senden</h3>
-          <form>
-            <input type="text" placeholder="Ihr Name" required />
-            <input type="tel" placeholder="Ihre Telefonnummer" />
-            <input type="email" placeholder="Ihre E-Mail" />
-            <textarea rows="4" placeholder="Ihre Nachricht oder Terminwunsch"></textarea>
-            <button type="submit" class="btn">Absenden</button>
-          </form>
+        <div class="kontakt-map reveal">
+          <iframe
+            title="Standort Friseursalon am Gutshof"
+            src="https://www.openstreetmap.org/export/embed.html?bbox=13.847,51.518,13.857,51.524&layer=mapnik&marker=51.521,13.852"
+            width="100%"
+            height="320"
+            style="border:0; border-radius:16px;"
+            loading="lazy"
+            allowfullscreen>
+          </iframe>
+          <p style="margin-top:10px;font-size:0.85rem;color:#888">
+            <a href="https://www.openstreetmap.org/?mlat=51.521&mlon=13.852#map=16/51.521/13.852" target="_blank" rel="noopener">Größere Karte anzeigen</a>
+          </p>
         </div>
       </div>
     </div>
@@ -150,8 +223,12 @@
   <!-- Footer -->
   <footer>
     <p>&copy; 2025 Friseursalon am Gutshof · Kathleen Welisch · Lauchhammer</p>
-    <p><small>Impressum | Datenschutz</small></p>
+    <p><small><a href="impressum.html">Impressum</a> | <a href="datenschutz.html">Datenschutz</a></small></p>
   </footer>
 
+  <!-- Scroll-to-top -->
+  <button id="scroll-top" aria-label="Nach oben scrollen" title="Nach oben">&#8679;</button>
+
+  <script src="main.js"></script>
 </body>
 </html>
