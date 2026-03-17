@@ -1,4 +1,12 @@
-// Hamburger Menu
+// ===== NAV: scrolled class + shrink =====
+const header = document.getElementById('header');
+window.addEventListener('scroll', () => {
+  header.classList.toggle('scrolled', window.scrollY > 60);
+  updateActiveLink();
+  scrollTopBtn.classList.toggle('visible', window.scrollY > 500);
+}, { passive: true });
+
+// ===== HAMBURGER =====
 const burger = document.getElementById('burger');
 const navLinks = document.getElementById('nav-links');
 
@@ -14,41 +22,35 @@ navLinks.querySelectorAll('a').forEach(link => {
   });
 });
 
-// Active nav link on scroll
+// ===== ACTIVE NAV LINK =====
 const sections = document.querySelectorAll('section[id]');
-const links = document.querySelectorAll('.nav-links a[href^="#"]');
+const navAnchors = document.querySelectorAll('.nav-links a[href^="#"]');
 
 function updateActiveLink() {
   let current = '';
   sections.forEach(sec => {
     if (window.scrollY >= sec.offsetTop - 100) current = sec.id;
   });
-  links.forEach(a => {
+  navAnchors.forEach(a => {
     a.classList.toggle('active', a.getAttribute('href') === '#' + current);
   });
 }
 
-// Scroll-to-top button
+// ===== SCROLL TO TOP =====
 const scrollTopBtn = document.getElementById('scroll-top');
-
-window.addEventListener('scroll', () => {
-  scrollTopBtn.classList.toggle('visible', window.scrollY > 400);
-  updateActiveLink();
-}, { passive: true });
-
 scrollTopBtn.addEventListener('click', () => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
-// Reveal on scroll (IntersectionObserver)
+// ===== REVEAL ON SCROLL =====
 const reveals = document.querySelectorAll('.reveal');
 const observer = new IntersectionObserver((entries) => {
   entries.forEach((entry, i) => {
     if (entry.isIntersecting) {
-      setTimeout(() => entry.target.classList.add('visible'), i * 80);
+      setTimeout(() => entry.target.classList.add('visible'), i * 100);
       observer.unobserve(entry.target);
     }
   });
-}, { threshold: 0.12 });
+}, { threshold: 0.1 });
 
 reveals.forEach(el => observer.observe(el));
