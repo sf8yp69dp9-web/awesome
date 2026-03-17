@@ -1,0 +1,382 @@
+/* ===== RESET & BASE ===== */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --primary: #c8956c;
+  --primary-dark: #a5714a;
+  --dark: #2b2b2b;
+  --light: #faf7f4;
+  --white: #ffffff;
+  --gray: #888;
+  --section-pad: 80px 20px;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Georgia', serif;
+  color: var(--dark);
+  background: var(--white);
+  line-height: 1.7;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ===== NAVBAR ===== */
+header {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 1000;
+  background: rgba(255,255,255,0.97);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+.navbar {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 18px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  font-size: 1.4rem;
+  font-weight: bold;
+  color: var(--primary-dark);
+  letter-spacing: 1px;
+}
+
+.logo .scissors {
+  font-size: 1.6rem;
+  margin-right: 8px;
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+  gap: 32px;
+}
+
+.nav-links a {
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+  color: var(--dark);
+  transition: color 0.2s;
+}
+
+.nav-links a:hover {
+  color: var(--primary);
+}
+
+/* ===== HERO ===== */
+.hero {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f9ede4 0%, #f0d8c8 50%, #e8c9b0 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 100px 20px 60px;
+}
+
+.hero-content h1 {
+  font-size: 3.5rem;
+  line-height: 1.2;
+  color: var(--dark);
+  margin-bottom: 20px;
+}
+
+.hero-content h1 span {
+  color: var(--primary-dark);
+}
+
+.hero-content p {
+  font-size: 1.2rem;
+  color: #666;
+  max-width: 480px;
+  margin: 0 auto 36px;
+}
+
+/* ===== BUTTON ===== */
+.btn {
+  display: inline-block;
+  background: var(--primary);
+  color: var(--white);
+  padding: 14px 36px;
+  border-radius: 30px;
+  font-size: 1rem;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  letter-spacing: 0.5px;
+}
+
+.btn:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+}
+
+/* ===== CONTAINER ===== */
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ===== LEISTUNGEN ===== */
+.leistungen {
+  padding: var(--section-pad);
+  background: var(--white);
+  text-align: center;
+}
+
+.leistungen h2,
+.ueber-uns h2,
+.oeffnungszeiten h2,
+.kontakt h2 {
+  font-size: 2.2rem;
+  margin-bottom: 12px;
+  color: var(--dark);
+}
+
+.subtitle {
+  color: var(--gray);
+  margin-bottom: 50px;
+  font-size: 1.05rem;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 28px;
+  margin-top: 20px;
+}
+
+.card {
+  background: var(--light);
+  border-radius: 16px;
+  padding: 36px 28px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.08);
+}
+
+.card-icon {
+  font-size: 2.4rem;
+  margin-bottom: 16px;
+}
+
+.card h3 {
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+  color: var(--primary-dark);
+}
+
+.card p {
+  font-size: 0.95rem;
+  color: #666;
+}
+
+/* ===== UBER UNS ===== */
+.ueber-uns {
+  padding: var(--section-pad);
+  background: var(--light);
+}
+
+.ueber-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+.ueber-text h2 {
+  margin-bottom: 24px;
+}
+
+.ueber-text p {
+  color: #555;
+  margin-bottom: 16px;
+}
+
+.bild-placeholder {
+  background: linear-gradient(135deg, #f0d8c8, #e8c9b0);
+  border-radius: 20px;
+  height: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--primary-dark);
+}
+
+.bild-placeholder span {
+  font-size: 5rem;
+}
+
+.bild-placeholder p {
+  font-size: 1.4rem;
+  font-weight: bold;
+}
+
+.bild-placeholder small {
+  font-size: 0.9rem;
+  color: #a5714a;
+}
+
+/* ===== ÖFFNUNGSZEITEN ===== */
+.oeffnungszeiten {
+  padding: var(--section-pad);
+  background: var(--primary-dark);
+  color: var(--white);
+  text-align: center;
+}
+
+.oeffnungszeiten h2 {
+  color: var(--white);
+  margin-bottom: 36px;
+}
+
+table {
+  margin: 0 auto;
+  border-collapse: collapse;
+  min-width: 320px;
+}
+
+table tr {
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+table td {
+  padding: 12px 32px;
+  font-size: 1rem;
+}
+
+table td:first-child {
+  text-align: left;
+  font-weight: bold;
+  color: #f5d5b8;
+}
+
+table td:last-child {
+  text-align: right;
+}
+
+/* ===== KONTAKT ===== */
+.kontakt {
+  padding: var(--section-pad);
+  background: var(--white);
+  text-align: center;
+}
+
+.kontakt h2 {
+  margin-bottom: 50px;
+}
+
+.kontakt-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  text-align: left;
+}
+
+.kontakt-info h3 {
+  font-size: 1rem;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 24px 0 6px;
+}
+
+.kontakt-info h3:first-child {
+  margin-top: 0;
+}
+
+.kontakt-info p, .kontakt-info a {
+  color: #555;
+  font-size: 0.97rem;
+}
+
+.kontakt-info a:hover {
+  color: var(--primary);
+}
+
+.kontakt-info .btn {
+  margin-top: 20px;
+}
+
+.kontakt-formular h3 {
+  font-size: 1.3rem;
+  margin-bottom: 20px;
+  color: var(--dark);
+}
+
+.kontakt-formular input,
+.kontakt-formular textarea {
+  width: 100%;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: var(--light);
+  transition: border-color 0.2s;
+}
+
+.kontakt-formular input:focus,
+.kontakt-formular textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.kontakt-formular .btn {
+  width: 100%;
+  text-align: center;
+}
+
+/* ===== FOOTER ===== */
+footer {
+  background: var(--dark);
+  color: #aaa;
+  text-align: center;
+  padding: 30px 20px;
+  font-size: 0.9rem;
+  line-height: 2;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .hero-content h1 {
+    font-size: 2.4rem;
+  }
+
+  .nav-links {
+    display: none;
+  }
+
+  .ueber-grid,
+  .kontakt-grid {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+
+  .bild-placeholder {
+    height: 260px;
+  }
+}
