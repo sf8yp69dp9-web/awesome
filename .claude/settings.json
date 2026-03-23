@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"systemMessage\": \"Session ending — update memory/user.md, memory/decisions.md, memory/people.md, and memory/preferences.md with any new context from this session.\"}'"
+          }
+        ]
+      }
+    ]
+  }
+}
