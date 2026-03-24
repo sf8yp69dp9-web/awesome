@@ -1,0 +1,2 @@
+# Decision review — runs daily at 08:00
+0 8 * * * /home/user/awesome/check_reviews.sh >> /home/user/awesome/check_reviews.log 2>&1
