@@ -1,2 +1,5 @@
 # Decision review — runs daily at 08:00
 0 8 * * * /home/user/awesome/check_reviews.sh >> /home/user/awesome/check_reviews.log 2>&1
+
+# Task processor — runs every hour
+0 * * * * /usr/bin/python3 /home/user/awesome/process_tasks.py >> /home/user/awesome/tasks.log 2>&1
