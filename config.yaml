@@ -1,0 +1,61 @@
+# Trading Bot Configuration
+# ==========================================
+# IMPORTANT: Never commit real API keys!
+# Copy this to config.local.yaml and add your keys there.
+
+exchange:
+  name: "binance"           # binance or kraken
+  api_key: ""               # Set via env: EXCHANGE_API_KEY
+  api_secret: ""            # Set via env: EXCHANGE_API_SECRET
+  testnet: true             # Use testnet for safety - set false for live trading
+  rate_limit: true
+
+trading:
+  symbols:                  # Trading pairs to watch
+    - "BTC/USDT"
+    - "ETH/USDT"
+    - "SOL/USDT"
+  timeframe: "1h"           # Candle timeframe: 1m, 5m, 15m, 1h, 4h, 1d
+  strategy: "ema_crossover" # ema_crossover | rsi | macd
+  dry_run: true             # true = paper trading, false = live trading
+
+portfolio:
+  initial_capital: 500.0    # EUR / USDT starting capital
+  base_currency: "USDT"     # Base currency for portfolio valuation
+
+risk:
+  max_position_size_pct: 0.10   # Max 10% of portfolio per trade
+  stop_loss_pct: 0.02           # 2% stop-loss per trade
+  take_profit_pct: 0.04         # 4% take-profit per trade
+  max_open_positions: 3         # Max simultaneous open trades
+  max_daily_loss_pct: 0.05      # Stop trading if daily loss > 5%
+  max_drawdown_pct: 0.15        # Stop trading if drawdown > 15%
+
+strategies:
+  ema_crossover:
+    fast_period: 9
+    slow_period: 21
+    signal_period: 5
+
+  rsi:
+    period: 14
+    oversold: 30
+    overbought: 70
+    lookback: 2               # consecutive bars to confirm
+
+  macd:
+    fast_period: 12
+    slow_period: 26
+    signal_period: 9
+
+backtesting:
+  start_date: "2024-01-01"
+  end_date: "2025-01-01"
+  initial_capital: 500.0
+  commission: 0.001           # 0.1% per trade (Binance maker/taker)
+
+logging:
+  level: "INFO"               # DEBUG, INFO, WARNING, ERROR
+  log_file: "logs/trading_bot.log"
+  trade_log: "logs/trades.csv"
+  report_dir: "reports/"
