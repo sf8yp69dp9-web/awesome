@@ -36,6 +36,13 @@ risk:
   max_daily_loss_pct: 0.05      # Stop trading if daily loss > 5%
   max_drawdown_pct: 0.15        # Stop trading if drawdown > 15%
 
+# Telegram Benachrichtigungen
+# Setup: @BotFather → /newbot → Token holen → Bot anschreiben → Chat-ID von getUpdates
+# Dann in .env setzen: TELEGRAM_BOT_TOKEN=... und TELEGRAM_CHAT_ID=...
+telegram:
+  enabled: false              # Wird automatisch aktiviert wenn TELEGRAM_BOT_TOKEN gesetzt
+  daily_summary_hour: 20      # Uhrzeit für Tagesbericht (UTC, 20 = 21 Uhr MEZ)
+
 # AI Signal Validator (Claude API)
 # Set ANTHROPIC_API_KEY env var to enable — leave blank to run without AI
 ai:

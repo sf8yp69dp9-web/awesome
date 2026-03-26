@@ -45,6 +45,14 @@ class RiskConfig:
 
 
 @dataclass
+class TelegramConfig:
+    token: str = ""                  # Set via TELEGRAM_BOT_TOKEN env var
+    chat_id: str = ""                # Set via TELEGRAM_CHAT_ID env var
+    enabled: bool = False
+    daily_summary_hour: int = 20     # UTC hour to send daily summary (20 = 8pm UTC)
+
+
+@dataclass
 class AIConfig:
     enabled: bool = False
     api_key: str = ""                    # Set via ANTHROPIC_API_KEY env var
@@ -97,6 +105,7 @@ class BotConfig:
     portfolio: PortfolioConfig = field(default_factory=PortfolioConfig)
     risk: RiskConfig = field(default_factory=RiskConfig)
     ai: AIConfig = field(default_factory=AIConfig)
+    telegram: TelegramConfig = field(default_factory=TelegramConfig)
     strategy_params: StrategyParams = field(default_factory=StrategyParams)
     backtesting: BacktestConfig = field(default_factory=BacktestConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
@@ -207,6 +216,12 @@ def load_config(config_path: str = "config.yaml") -> BotConfig:
         cfg.logging.trade_log = lg.get("trade_log", cfg.logging.trade_log)
         cfg.logging.report_dir = lg.get("report_dir", cfg.logging.report_dir)
 
+    # Telegram
+    if "telegram" in raw:
+        tg = raw["telegram"]
+        cfg.telegram.enabled = tg.get("enabled", cfg.telegram.enabled)
+        cfg.telegram.daily_summary_hour = tg.get("daily_summary_hour", cfg.telegram.daily_summary_hour)
+
     # Environment overrides (highest priority)
     if os.environ.get("EXCHANGE_API_KEY"):
         cfg.exchange.api_key = os.environ["EXCHANGE_API_KEY"]
@@ -219,6 +234,11 @@ def load_config(config_path: str = "config.yaml") -> BotConfig:
     if os.environ.get("ANTHROPIC_API_KEY"):
         cfg.ai.api_key = os.environ["ANTHROPIC_API_KEY"]
         cfg.ai.enabled = True
+    if os.environ.get("TELEGRAM_BOT_TOKEN"):
+        cfg.telegram.token = os.environ["TELEGRAM_BOT_TOKEN"]
+        cfg.telegram.enabled = True
+    if os.environ.get("TELEGRAM_CHAT_ID"):
+        cfg.telegram.chat_id = os.environ["TELEGRAM_CHAT_ID"]
 
     return cfg
 

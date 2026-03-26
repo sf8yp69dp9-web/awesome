@@ -190,9 +190,64 @@ Should I {signal.signal.value.upper()} {symbol} at {current_price:.4f}?"""
         if risk_notes:
             logger.info(f"AI Risk: {risk_notes}")
 
-        return AIValidation(
-            approved=approved,
-            confidence=confidence,
-            reasoning=reasoning,
-            risk_notes=risk_notes,
+    EXPLAIN_PROMPT_DE = """Du bist ein freundlicher Krypto-Trading-Assistent.
+Erkläre in 2-3 kurzen, klaren deutschen Sätzen warum dieser Trade gemacht wurde.
+Schreibe direkt und verständlich — kein Fachjargon, keine Floskeln.
+Antworte NUR mit dem Erklärungstext, kein JSON, keine Aufzählung."""
+
+    def explain_trade_de(
+        self,
+        symbol: str,
+        signal: StrategyResult,
+        df: pd.DataFrame,
+        current_price: float,
+        stop_loss: Optional[float] = None,
+        take_profit: Optional[float] = None,
+    ) -> str:
+        """
+        Generiert eine kurze deutsche Erklärung des Trades für Telegram.
+        Gibt leeren String zurück wenn AI deaktiviert.
+        """
+        if not self.is_enabled:
+            return ""
+        try:
+            return self._explain_claude_de(symbol, signal, df, current_price, stop_loss, take_profit)
+        except Exception as e:
+            logger.warning(f"AI-Erklärung fehlgeschlagen: {e}")
+            return ""
+
+    def _explain_claude_de(
+        self,
+        symbol: str,
+        signal: StrategyResult,
+        df: pd.DataFrame,
+        current_price: float,
+        stop_loss: Optional[float],
+        take_profit: Optional[float],
+    ) -> str:
+        recent = df.tail(10)
+        closes = recent["close"]
+        change_pct = (closes.iloc[-1] - closes.iloc[0]) / closes.iloc[0] * 100
+        high = recent["high"].max()
+        low = recent["low"].min()
+
+        sl_info = f"Stop-Loss: {stop_loss:.2f}" if stop_loss else ""
+        tp_info = f"Take-Profit: {take_profit:.2f}" if take_profit else ""
+
+        user_msg = (
+            f"Symbol: {symbol}\n"
+            f"Signal: {signal.signal.value.upper()}\n"
+            f"Preis: {current_price:.2f} USDT\n"
+            f"Strategie-Grund: {signal.reason}\n"
+            f"Letzte 10 Kerzen: {change_pct:+.2f}% | Hoch: {high:.2f} | Tief: {low:.2f}\n"
+            + (f"{sl_info}  {tp_info}" if sl_info else "")
         )
+
+        response = self._client.messages.create(
+            model=self.cfg.model,
+            max_tokens=120,
+            system=self.EXPLAIN_PROMPT_DE,
+            messages=[{"role": "user", "content": user_msg}],
+        )
+        return response.content[0].text.strip()
+

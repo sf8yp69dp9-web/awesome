@@ -14,6 +14,7 @@ from .strategies import STRATEGY_REGISTRY
 from .strategies.base import Signal
 from .reporter import Reporter
 from .ai_validator import AISignalValidator
+from .telegram_notifier import TelegramNotifier
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +111,7 @@ class OfflinePaperTrader:
 
         self.reporter = Reporter(config)
         self.ai_validator = AISignalValidator(config.ai)
+        self.telegram = TelegramNotifier(config.telegram.token, config.telegram.chat_id)
         self._symbol = config.trading.symbols[0]
 
     def run(self, candles: int = 8784, print_every: int = 100) -> None:
@@ -158,7 +160,7 @@ class OfflinePaperTrader:
             if result.signal == Signal.BUY and not self.portfolio.has_position(self._symbol):
                 validation = self.ai_validator.validate(self._symbol, result, window, current_price)
                 if validation.approved:
-                    self._buy(sim, self._symbol, current_price, df=window)
+                    self._buy(sim, self._symbol, current_price, df=window, signal_result=result)
                 elif not validation.skipped:
                     logger.info(f"[AI] BUY blocked for {self._symbol}: {validation.reasoning}")
             elif result.signal == Signal.SELL and self.portfolio.has_position(self._symbol):
@@ -187,7 +189,7 @@ class OfflinePaperTrader:
         report_path = self.reporter.save_report(self.portfolio)
         print(f"\nReport saved: {report_path}")
 
-    def _buy(self, sim: SimulatedExchange, symbol: str, price: float, df=None) -> None:
+    def _buy(self, sim: SimulatedExchange, symbol: str, price: float, df=None, signal_result=None) -> None:
         decision = self.risk.evaluate_trade(self.portfolio, symbol, "long", price, sim.get_min_order_amount(symbol), df=df)
         if not decision.allowed:
             return
@@ -200,6 +202,22 @@ class OfflinePaperTrader:
             stop_loss=decision.stop_loss_price, take_profit=decision.take_profit_price,
             order_id=order.get("id"),
         )
+        # KI-Erklärung + Telegram
+        explanation = ""
+        if signal_result and df is not None:
+            explanation = self.ai_validator.explain_trade_de(
+                symbol, signal_result, df, fill_price,
+                stop_loss=decision.stop_loss_price,
+                take_profit=decision.take_profit_price,
+            )
+        self.telegram.trade_opened(
+            symbol=symbol, price=fill_price, amount=amount,
+            cost=decision.position_size_usd,
+            stop_loss=decision.stop_loss_price,
+            take_profit=decision.take_profit_price,
+            strategy_reason=signal_result.reason if signal_result else "—",
+            explanation=explanation,
+        )
 
     def _sell(self, sim: SimulatedExchange, symbol: str, price: float, reason: str) -> None:
         pos = self.portfolio.get_position(symbol)
@@ -207,4 +225,14 @@ class OfflinePaperTrader:
             return
         order = sim.create_market_sell(symbol, pos.amount)
         fill_price = float(order.get("price") or price)
-        self.portfolio.close_position(symbol, fill_price, reason=reason)
+        trade = self.portfolio.close_position(symbol, fill_price, reason=reason)
+        if trade:
+            self.telegram.trade_closed(
+                symbol=symbol,
+                entry_price=trade.entry_price,
+                exit_price=trade.exit_price,
+                pnl=trade.pnl,
+                pnl_pct=trade.pnl_pct * 100,
+                reason=reason,
+                duration_hours=trade.duration_hours,
+            )
