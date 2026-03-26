@@ -127,15 +127,19 @@ trading_bot/
 | **Startup Animation** | ✅ | cli.py |
 | **Sentiment Analyzer** | ✅ | sentiment.py |
 | **AI-Assistent** | ✅ | ai_assistant.py |
-| Content Creator | 🔲 | — |
+| **Content Creator** | ✅ | content_creator.py |
 
 ---
 
 ## Nächste Schritte
 
-1. **Content Creator** — automatische Posts auf Instagram/X mit KI
-2. **VPS Setup** — Bot 24/7 laufen lassen (Hetzner ~4€/Monat empfohlen)
-3. **Live Trading** — Wenn Testnet stabil läuft, auf echte Keys umstellen
+1. **VPS Setup** — Bot 24/7 laufen lassen (Hetzner ~4€/Monat empfohlen)
+2. **Live Trading** — Wenn Testnet stabil läuft, auf echte Keys umstellen
+3. **Mehr Coins** — ETH/USDT, SOL/USDT hinzufügen
+
+## Wichtige Erkenntnis (Session 2026-03-26)
+- Bot muss auf PC laufen damit Telegram-Befehle funktionieren
+- Nutzer ist oft nur am Handy → VPS wird wichtig für 24/7-Betrieb
 
 ---
 

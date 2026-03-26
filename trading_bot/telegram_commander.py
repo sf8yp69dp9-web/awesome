@@ -19,15 +19,23 @@ logger = logging.getLogger(__name__)
 
 HILFE_TEXT = """🤖 <b>TradingMaschiene — Befehle</b>
 
+📊 <b>Trading</b>
 /status    — Portfolio-Übersicht
 /portfolio — Alle Trades & Positionen
 /pause     — Neue Käufe pausieren
 /resume    — Käufe wieder aktivieren
 /stop      — Bot stoppen
+
+✍️ <b>Content Creator</b>
+/post      — Post für alle Plattformen generieren
+/post btc  — Post zu einem Thema generieren
+/drafts    — Letzte 5 Entwürfe anzeigen
+
+💬 <b>AI-Assistent</b>
 /reset     — Gesprächsverlauf löschen
 /hilfe     — Diese Hilfe
 
-💬 <b>Oder schreib einfach eine Frage</b> — KI antwortet direkt!</b>"""
+<i>Oder schreib einfach eine Frage — KI antwortet direkt!</i>"""
 
 
 class TelegramCommander:
@@ -50,8 +58,9 @@ class TelegramCommander:
         self.on_status: Optional[Callable[[], str]] = None
         self.on_portfolio: Optional[Callable[[], str]] = None
 
-        # AI-Assistent (lazy init)
+        # Lazy-init Module
         self._assistant = None
+        self._creator = None
 
         if self._enabled:
             logger.info("Telegram Commander bereit — empfange Befehle")
@@ -101,6 +110,15 @@ class TelegramCommander:
             self._assistant = AIAssistant(get_status_fn=self.on_status)
         return self._assistant
 
+    def _get_creator(self):
+        if self._creator is None:
+            from .content_creator import ContentCreator
+            self._creator = ContentCreator(
+                telegram_token=self.token,
+                telegram_channel_id=self.chat_id,
+            )
+        return self._creator
+
     def _handle(self, update: dict) -> None:
         msg = update.get("message", {})
         chat_id_int = msg.get("chat", {}).get("id")
@@ -140,6 +158,44 @@ class TelegramCommander:
         elif cmd == "/reset":
             self._get_assistant().clear_history(chat_id_int)
             self._send("🔄 Gesprächsverlauf gelöscht. Frischer Start!")
+
+        elif cmd.startswith("/post"):
+            topic = text[5:].strip() or ""
+            self._send("✍️ <i>Generiere Posts für alle Plattformen...</i>")
+            creator = self._get_creator()
+            if not creator:
+                self._send("❌ Content Creator nicht verfügbar. ANTHROPIC_API_KEY fehlt.")
+                return
+            context = self.on_status() if self.on_status else ""
+            drafts = creator.generate_all_platforms(topic=topic, context=context)
+            if not drafts:
+                self._send("❌ Fehler beim Generieren. Bitte erneut versuchen.")
+                return
+            for platform, draft in drafts.items():
+                icons = {"telegram": "📱", "twitter": "🐦", "instagram": "📸"}
+                icon = icons.get(platform, "📝")
+                self._send(
+                    f"{icon} <b>{platform.capitalize()}</b> ({len(draft.full_text())} Zeichen)\n\n"
+                    f"{draft.full_text()}\n\n"
+                    f"🎨 <i>Bild-Prompt:</i>\n<code>{draft.image_prompt}</code>"
+                )
+
+        elif cmd == "/drafts":
+            creator = self._get_creator()
+            if not creator:
+                self._send("❌ Content Creator nicht verfügbar.")
+                return
+            drafts = creator.get_drafts(5)
+            if not drafts:
+                self._send("📭 Noch keine Entwürfe. Schreibe /post um einen zu erstellen.")
+                return
+            for d in drafts:
+                ts = d.created_at.strftime("%d.%m %H:%M")
+                self._send(
+                    f"📝 <b>{d.platform.capitalize()}</b> · {ts}\n"
+                    f"Thema: {d.topic}\n\n"
+                    f"{d.full_text()[:300]}{'...' if len(d.full_text())>300 else ''}"
+                )
 
         else:
             # Freie Textnachricht → AI-Assistent
