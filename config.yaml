@@ -16,7 +16,7 @@ trading:
     - "ETH/USDT"
     - "SOL/USDT"
   timeframe: "1h"           # Candle timeframe: 1m, 5m, 15m, 1h, 4h, 1d
-  strategy: "ema_crossover" # ema_crossover | rsi | macd
+  strategy: "ensemble"      # ema_crossover | rsi | macd | ensemble
   dry_run: true             # true = paper trading, false = live trading
 
 portfolio:
@@ -25,11 +25,20 @@ portfolio:
 
 risk:
   max_position_size_pct: 0.10   # Max 10% of portfolio per trade
-  stop_loss_pct: 0.02           # 2% stop-loss per trade
+  stop_loss_pct: 0.02           # 2% initial stop-loss per trade
   take_profit_pct: 0.04         # 4% take-profit per trade
+  trailing_stop_pct: 0.015      # 1.5% trailing stop (ratchets up as price rises)
+  trailing_stop_enabled: true   # Enable trailing stop-loss
   max_open_positions: 3         # Max simultaneous open trades
   max_daily_loss_pct: 0.05      # Stop trading if daily loss > 5%
   max_drawdown_pct: 0.15        # Stop trading if drawdown > 15%
+
+# AI Signal Validator (Claude API)
+# Set ANTHROPIC_API_KEY env var to enable — leave blank to run without AI
+ai:
+  enabled: false                # Set to true when ANTHROPIC_API_KEY is configured
+  model: "claude-haiku-4-5-20251001"  # Fast + cheap for signal validation (~$0.001/signal)
+  confidence_threshold: 0.6    # Min confidence to approve signal (0.0-1.0)
 
 strategies:
   ema_crossover:

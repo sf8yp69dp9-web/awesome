@@ -1,14 +1,17 @@
-"""Reporting, dashboard display, and HTML/CSV report generation."""
+"""Reporting, live dashboard, and report generation."""
 import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
+import pandas as pd
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
+from rich.columns import Columns
 from rich.text import Text
+from rich.align import Align
 from rich import box
 
 from .config import BotConfig
@@ -18,6 +21,40 @@ logger = logging.getLogger(__name__)
 console = Console()
 
 
+# ── Sparkline helpers ────────────────────────────────────────────────────────
+
+_SPARK_BLOCKS = " ▁▂▃▄▅▆▇█"
+
+
+def sparkline(values: List[float], width: int = 20) -> str:
+    """Render a compact sparkline from a list of float values."""
+    if not values or len(values) < 2:
+        return "─" * width
+
+    # Downsample to width
+    if len(values) > width:
+        step = len(values) / width
+        values = [values[int(i * step)] for i in range(width)]
+
+    mn, mx = min(values), max(values)
+    rng = mx - mn or 1.0
+    chars = [_SPARK_BLOCKS[int((v - mn) / rng * 8)] for v in values]
+    return "".join(chars)
+
+
+def price_trend_arrow(values: List[float]) -> str:
+    if len(values) < 2:
+        return "→"
+    delta = values[-1] - values[-3] if len(values) >= 3 else values[-1] - values[0]
+    if delta > 0:
+        return "▲"
+    if delta < 0:
+        return "▼"
+    return "→"
+
+
+# ── Reporter ─────────────────────────────────────────────────────────────────
+
 class Reporter:
     """Generates console dashboards and file reports."""
 
@@ -25,123 +62,193 @@ class Reporter:
         self.cfg = config
         self.report_dir = Path(config.logging.report_dir)
         self.report_dir.mkdir(parents=True, exist_ok=True)
+        self._equity_history: List[float] = []
+        self._price_history: List[float] = []
+
+    def record_tick(self, portfolio_value: float, current_price: Optional[float] = None) -> None:
+        """Call every tick to keep history for sparklines."""
+        self._equity_history.append(portfolio_value)
+        if current_price is not None:
+            self._price_history.append(current_price)
 
     def print_header(self) -> None:
+        mode = "[red]LIVE[/red]" if not self.cfg.trading.dry_run else "[green]PAPER[/green]"
+        symbols = " · ".join(self.cfg.trading.symbols)
         console.print(Panel(
-            Text("CRYPTO TRADING BOT", justify="center", style="bold cyan") ,
-            subtitle=f"Strategy: [yellow]{self.cfg.trading.strategy}[/yellow] | "
-                     f"Mode: [green]PAPER[/green] | "
-                     f"Capital: [white]{self.cfg.portfolio.initial_capital:.0f} {self.cfg.portfolio.base_currency}[/white]",
-            border_style="cyan",
+            Align.center(Text("CRYPTO TRADING BOT", style="bold cyan")),
+            subtitle=(
+                f"Strategy: [yellow]{self.cfg.trading.strategy}[/yellow]  │  "
+                f"Mode: {mode}  │  "
+                f"Capital: [white]{self.cfg.portfolio.initial_capital:.0f} "
+                f"{self.cfg.portfolio.base_currency}[/white]  │  "
+                f"Symbols: [dim]{symbols}[/dim]"
+            ),
+            border_style="bright_blue",
+            padding=(0, 2),
         ))
 
-    def print_portfolio_status(self, portfolio: Portfolio) -> None:
+    def print_portfolio_status(self, portfolio: Portfolio, current_prices: Optional[dict] = None) -> None:
         summary = portfolio.summary()
+        self._equity_history.append(summary["current_value"])
         now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
+        ret_pct = summary["total_return_pct"]
+        ret_color = "green" if ret_pct >= 0 else "red"
         pnl_color = "green" if summary["total_realized_pnl"] >= 0 else "red"
-        ret_color = "green" if summary["total_return_pct"] >= 0 else "red"
+        daily_color = "green" if summary["daily_pnl"] >= 0 else "red"
 
-        # Main stats table
-        table = Table(title=f"Portfolio Status — {now}", box=box.ROUNDED, border_style="blue")
-        table.add_column("Metric", style="cyan", width=24)
-        table.add_column("Value", style="white", justify="right")
+        eq_spark = sparkline(self._equity_history[-40:], width=25)
+        eq_arrow = price_trend_arrow(self._equity_history[-5:])
 
-        table.add_row("Initial Capital",    f"{summary['initial_capital']:.2f} {self.cfg.portfolio.base_currency}")
-        table.add_row("Current Value",      f"{summary['current_value']:.2f} {self.cfg.portfolio.base_currency}")
-        table.add_row("Cash Available",     f"{summary['cash']:.2f} {self.cfg.portfolio.base_currency}")
-        table.add_row("Total Return",       f"[{ret_color}]{summary['total_return_pct']:+.2f}%[/{ret_color}]")
-        table.add_row("Realized PnL",       f"[{pnl_color}]{summary['total_realized_pnl']:+.2f}[/{pnl_color}]")
-        table.add_row("Daily PnL",          f"{summary['daily_pnl']:+.2f}")
-        table.add_row("Open Positions",     str(summary["open_positions"]))
-        table.add_row("Total Trades",       str(summary["total_trades"]))
-        table.add_row("Win Rate",           f"{summary['win_rate_pct']:.1f}%")
-        table.add_row("Max Drawdown",       f"[red]{summary['drawdown_pct']:.2f}%[/red]")
+        # ── Left panel: Portfolio stats ──────────────────────────────────
+        stats = Table(box=box.SIMPLE, show_header=False, padding=(0, 1))
+        stats.add_column("k", style="dim cyan", width=18)
+        stats.add_column("v", justify="right", min_width=14)
 
-        console.print(table)
+        stats.add_row("Capital",
+            f"[dim]{summary['initial_capital']:.2f}[/dim]")
+        stats.add_row("Current Value",
+            f"[bold]{summary['current_value']:.2f} {self.cfg.portfolio.base_currency}[/bold]")
+        stats.add_row("Cash",
+            f"{summary['cash']:.2f}")
+        stats.add_row("Total Return",
+            f"[{ret_color}]{ret_pct:+.2f}%[/{ret_color}]")
+        stats.add_row("Realized PnL",
+            f"[{pnl_color}]{summary['total_realized_pnl']:+.2f}[/{pnl_color}]")
+        stats.add_row("Daily PnL",
+            f"[{daily_color}]{summary['daily_pnl']:+.2f}[/{daily_color}]")
+        stats.add_row("Drawdown",
+            f"[red]{summary['drawdown_pct']:.2f}%[/red]")
 
-        # Open positions table
+        left = Panel(stats, title="[cyan]Portfolio[/cyan]", border_style="blue", padding=(0, 1))
+
+        # ── Right panel: Trade stats + equity sparkline ──────────────────
+        trade_t = Table(box=box.SIMPLE, show_header=False, padding=(0, 1))
+        trade_t.add_column("k", style="dim cyan", width=18)
+        trade_t.add_column("v", justify="right", min_width=14)
+
+        trade_t.add_row("Total Trades",    str(summary["total_trades"]))
+        trade_t.add_row("Open Positions",  str(summary["open_positions"]))
+        trade_t.add_row("Win Rate",        f"{summary['win_rate_pct']:.1f}%")
+        trade_t.add_row("Avg Win",         f"[green]{summary['avg_win']:+.2f}[/green]" if summary['avg_win'] else "[dim]—[/dim]")
+        trade_t.add_row("Avg Loss",        f"[red]{summary['avg_loss']:+.2f}[/red]" if summary['avg_loss'] else "[dim]—[/dim]")
+        spark_row = Text(f"{eq_arrow} ", style="bold")
+        spark_row.append(eq_spark, style="cyan")
+        trade_t.add_row("Equity Curve", spark_row)
+
+        right = Panel(trade_t, title="[cyan]Trades[/cyan]", border_style="blue", padding=(0, 1))
+
+        console.print(Columns([left, right], equal=True, expand=True))
+        console.print(f"[dim]  ⏱  {now}[/dim]")
+
+        # ── Open positions ────────────────────────────────────────────────
         if portfolio.positions:
-            pos_table = Table(title="Open Positions", box=box.SIMPLE, border_style="yellow")
-            pos_table.add_column("Symbol")
+            pos_table = Table(
+                title="  Open Positions",
+                box=box.SIMPLE_HEAD,
+                border_style="yellow",
+                header_style="bold yellow",
+            )
+            pos_table.add_column("Symbol", style="cyan")
             pos_table.add_column("Side")
-            pos_table.add_column("Entry Price", justify="right")
+            pos_table.add_column("Entry", justify="right")
+            pos_table.add_column("Current", justify="right")
             pos_table.add_column("Amount", justify="right")
-            pos_table.add_column("Cost", justify="right")
+            pos_table.add_column("Unreal. PnL", justify="right")
             pos_table.add_column("Stop Loss", justify="right")
             pos_table.add_column("Take Profit", justify="right")
 
             for sym, pos in portfolio.positions.items():
+                cur_price = (current_prices or {}).get(sym, pos.entry_price)
+                upnl = pos.unrealized_pnl(cur_price)
+                upnl_pct = pos.unrealized_pnl_pct(cur_price) * 100
+                upnl_color = "green" if upnl >= 0 else "red"
+
+                price_spark = ""
+                if self._price_history:
+                    price_spark = " " + sparkline(self._price_history[-15:], width=8)
+
                 pos_table.add_row(
                     sym,
                     f"[green]{pos.side.upper()}[/green]",
                     f"{pos.entry_price:.4f}",
+                    f"{cur_price:.4f}{price_spark}",
                     f"{pos.amount:.6f}",
-                    f"{pos.cost:.2f}",
-                    f"[red]{pos.stop_loss:.4f}[/red]" if pos.stop_loss else "—",
-                    f"[green]{pos.take_profit:.4f}[/green]" if pos.take_profit else "—",
+                    f"[{upnl_color}]{upnl:+.2f} ({upnl_pct:+.2f}%)[/{upnl_color}]",
+                    f"[red]{pos.stop_loss:.4f}[/red]" if pos.stop_loss else "[dim]—[/dim]",
+                    f"[green]{pos.take_profit:.4f}[/green]" if pos.take_profit else "[dim]—[/dim]",
                 )
             console.print(pos_table)
 
-        # Recent trades
+        # ── Recent trades ─────────────────────────────────────────────────
         if portfolio.trades:
-            recent = portfolio.trades[-5:]
-            trade_table = Table(title="Recent Trades (last 5)", box=box.SIMPLE, border_style="magenta")
-            trade_table.add_column("Time")
-            trade_table.add_column("Symbol")
-            trade_table.add_column("Side")
-            trade_table.add_column("Entry", justify="right")
-            trade_table.add_column("Exit", justify="right")
-            trade_table.add_column("PnL", justify="right")
-            trade_table.add_column("Reason")
+            recent = portfolio.trades[-6:]
+            t = Table(
+                title="  Recent Trades",
+                box=box.SIMPLE_HEAD,
+                border_style="magenta",
+                header_style="bold magenta",
+            )
+            t.add_column("Time", style="dim")
+            t.add_column("Symbol")
+            t.add_column("Entry", justify="right")
+            t.add_column("Exit", justify="right")
+            t.add_column("PnL", justify="right")
+            t.add_column("Duration")
+            t.add_column("Reason")
 
-            for t in reversed(recent):
-                pnl_style = "green" if t.pnl >= 0 else "red"
-                trade_table.add_row(
-                    t.exit_time.strftime("%m-%d %H:%M"),
-                    t.symbol,
-                    t.side,
-                    f"{t.entry_price:.4f}",
-                    f"{t.exit_price:.4f}",
-                    f"[{pnl_style}]{t.pnl:+.2f} ({t.pnl_pct*100:+.2f}%)[/{pnl_style}]",
-                    t.reason,
+            for trade in reversed(recent):
+                pnl_color = "green" if trade.pnl >= 0 else "red"
+                icon = "✓" if trade.pnl >= 0 else "✗"
+                t.add_row(
+                    trade.exit_time.strftime("%m-%d %H:%M"),
+                    trade.symbol,
+                    f"{trade.entry_price:.4f}",
+                    f"{trade.exit_price:.4f}",
+                    f"[{pnl_color}]{icon} {trade.pnl:+.2f} ({trade.pnl_pct*100:+.2f}%)[/{pnl_color}]",
+                    f"{trade.duration_hours:.1f}h",
+                    _reason_label(trade.reason),
                 )
-            console.print(trade_table)
+            console.print(t)
 
     def print_backtest_results(self, metrics) -> None:
-        """Pretty-print BacktestMetrics to console."""
         ret_color = "green" if metrics.total_return_pct >= 0 else "red"
-        sharpe_color = "green" if metrics.sharpe_ratio >= 1 else ("yellow" if metrics.sharpe_ratio >= 0 else "red")
+        sharpe_color = ("green" if metrics.sharpe_ratio >= 1.5
+                        else "yellow" if metrics.sharpe_ratio >= 0.5
+                        else "red")
 
+        # Equity sparkline from trade history (approximated from metrics)
         table = Table(
-            title=f"Backtest: {metrics.strategy.upper()} on {metrics.symbol}",
+            title=f"  Backtest: [yellow]{metrics.strategy.upper()}[/yellow] on [cyan]{metrics.symbol}[/cyan]",
             box=box.ROUNDED,
             border_style="cyan",
+            header_style="bold",
         )
-        table.add_column("Metric", style="cyan", width=24)
-        table.add_column("Value", justify="right")
+        table.add_column("Metric", style="cyan", width=22)
+        table.add_column("Value", justify="right", min_width=20)
 
-        table.add_row("Period",             f"{metrics.start_date} → {metrics.end_date}")
-        table.add_row("Initial Capital",    f"{metrics.initial_capital:.2f}")
-        table.add_row("Final Value",        f"{metrics.final_value:.2f}")
-        table.add_row("Total Return",       f"[{ret_color}]{metrics.total_return_pct:+.2f}%[/{ret_color}]")
-        table.add_row("Total Trades",       str(metrics.total_trades))
-        table.add_row("Win Rate",           f"{metrics.win_rate_pct:.1f}%")
-        table.add_row("Profit Factor",      f"{metrics.profit_factor:.2f}")
-        table.add_row("Avg Win",            f"[green]{metrics.avg_win_pct:+.2f}%[/green]")
-        table.add_row("Avg Loss",           f"[red]{metrics.avg_loss_pct:+.2f}%[/red]")
-        table.add_row("Best Trade",         f"[green]{metrics.best_trade_pct:+.2f}%[/green]")
-        table.add_row("Worst Trade",        f"[red]{metrics.worst_trade_pct:+.2f}%[/red]")
-        table.add_row("Max Drawdown",       f"[red]{metrics.max_drawdown_pct:.2f}%[/red]")
-        table.add_row("Sharpe Ratio",       f"[{sharpe_color}]{metrics.sharpe_ratio:.3f}[/{sharpe_color}]")
-        table.add_row("Sortino Ratio",      f"{metrics.sortino_ratio:.3f}")
-        table.add_row("Avg Duration",       f"{metrics.avg_trade_duration_hours:.1f}h")
-        table.add_row("Total Commission",   f"{metrics.total_commission:.2f}")
+        table.add_row("Period",         f"{metrics.start_date} → {metrics.end_date}")
+        table.add_row("Initial Capital",f"[dim]{metrics.initial_capital:.2f}[/dim]")
+        table.add_row("Final Value",    f"[bold]{metrics.final_value:.2f}[/bold]")
+        table.add_row("Total Return",   f"[{ret_color}][bold]{metrics.total_return_pct:+.2f}%[/bold][/{ret_color}]")
+        table.add_row("", "")
+        table.add_row("Total Trades",   str(metrics.total_trades))
+        table.add_row("Win Rate",       _win_rate_bar(metrics.win_rate_pct))
+        table.add_row("Profit Factor",  f"{metrics.profit_factor:.2f}")
+        table.add_row("Avg Win",        f"[green]{metrics.avg_win_pct:+.2f}%[/green]")
+        table.add_row("Avg Loss",       f"[red]{metrics.avg_loss_pct:+.2f}%[/red]")
+        table.add_row("Best Trade",     f"[green]{metrics.best_trade_pct:+.2f}%[/green]")
+        table.add_row("Worst Trade",    f"[red]{metrics.worst_trade_pct:+.2f}%[/red]")
+        table.add_row("", "")
+        table.add_row("Max Drawdown",   f"[red]{metrics.max_drawdown_pct:.2f}%[/red]")
+        table.add_row("Sharpe Ratio",   f"[{sharpe_color}]{metrics.sharpe_ratio:.3f}[/{sharpe_color}]")
+        table.add_row("Sortino Ratio",  f"{metrics.sortino_ratio:.3f}")
+        table.add_row("Avg Duration",   f"{metrics.avg_trade_duration_hours:.1f}h")
+        table.add_row("Commission",     f"[dim]{metrics.total_commission:.2f}[/dim]")
 
         console.print(table)
 
     def save_report(self, portfolio: Portfolio) -> str:
-        """Save a JSON report to the reports directory."""
         summary = portfolio.summary()
         report = {
             "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -168,17 +275,14 @@ class Reporter:
                 for t in portfolio.trades
             ],
         }
-
         ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        report_path = self.report_dir / f"report_{ts}.json"
-        with open(report_path, "w") as f:
+        path = self.report_dir / f"report_{ts}.json"
+        with open(path, "w") as f:
             json.dump(report, f, indent=2)
-
-        logger.info(f"Report saved: {report_path}")
-        return str(report_path)
+        logger.info(f"Report saved: {path}")
+        return str(path)
 
     def save_backtest_report(self, metrics) -> str:
-        """Save backtest results as JSON."""
         data = {
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "symbol": metrics.symbol,
@@ -195,11 +299,31 @@ class Reporter:
             "sharpe_ratio": metrics.sharpe_ratio,
             "sortino_ratio": metrics.sortino_ratio,
         }
-
         ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        path = self.report_dir / f"backtest_{metrics.strategy}_{metrics.symbol.replace('/', '')}_{ts}.json"
+        sym = metrics.symbol.replace("/", "")
+        path = self.report_dir / f"backtest_{metrics.strategy}_{sym}_{ts}.json"
         with open(path, "w") as f:
             json.dump(data, f, indent=2)
-
         logger.info(f"Backtest report saved: {path}")
         return str(path)
+
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+def _win_rate_bar(pct: float) -> str:
+    filled = int(pct / 10)
+    bar = "█" * filled + "░" * (10 - filled)
+    color = "green" if pct >= 50 else "yellow" if pct >= 35 else "red"
+    return f"[{color}]{bar}[/{color}] {pct:.1f}%"
+
+
+def _reason_label(reason: str) -> str:
+    labels = {
+        "stop_loss":          "[red]Stop Loss[/red]",
+        "take_profit":        "[green]Take Profit[/green]",
+        "signal":             "[cyan]Signal[/cyan]",
+        "max_drawdown":       "[bold red]Drawdown[/bold red]",
+        "end_of_simulation":  "[dim]End[/dim]",
+        "end_of_data":        "[dim]End[/dim]",
+    }
+    return labels.get(reason, f"[dim]{reason}[/dim]")

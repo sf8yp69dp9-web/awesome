@@ -13,6 +13,7 @@ from .risk import RiskManager
 from .strategies import STRATEGY_REGISTRY
 from .strategies.base import Signal
 from .reporter import Reporter
+from .ai_validator import AISignalValidator
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +109,7 @@ class OfflinePaperTrader:
         self.strategy = STRATEGY_REGISTRY[strategy_name](strategy_params)
 
         self.reporter = Reporter(config)
+        self.ai_validator = AISignalValidator(config.ai)
         self._symbol = config.trading.symbols[0]
 
     def run(self, candles: int = 8784, print_every: int = 100) -> None:
@@ -135,6 +137,13 @@ class OfflinePaperTrader:
             current_price = sim.current_price
             current_time = sim.current_time
 
+            # Update trailing stop on open position
+            if self.portfolio.has_position(self._symbol) and self.cfg.risk.trailing_stop_enabled:
+                self.risk.update_trailing_stop(
+                    self._symbol, current_price, self.portfolio,
+                    trail_pct=self.cfg.risk.trailing_stop_pct,
+                )
+
             # Check SL/TP on open position
             if self.portfolio.has_position(self._symbol):
                 should_exit, reason = self.risk.check_exit_conditions(
@@ -147,7 +156,11 @@ class OfflinePaperTrader:
             result = self.strategy.generate_signal(window)
 
             if result.signal == Signal.BUY and not self.portfolio.has_position(self._symbol):
-                self._buy(sim, self._symbol, current_price)
+                validation = self.ai_validator.validate(self._symbol, result, window, current_price)
+                if validation.approved:
+                    self._buy(sim, self._symbol, current_price)
+                elif not validation.skipped:
+                    logger.info(f"[AI] BUY blocked for {self._symbol}: {validation.reasoning}")
             elif result.signal == Signal.SELL and self.portfolio.has_position(self._symbol):
                 self._sell(sim, self._symbol, current_price, "signal")
 

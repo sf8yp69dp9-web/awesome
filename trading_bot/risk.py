@@ -1,4 +1,4 @@
-"""Risk management: position sizing, stop/take, daily loss limits, drawdown guard."""
+"""Risk management: position sizing, stop/take, trailing stop, daily loss limits, drawdown guard."""
 import logging
 from dataclasses import dataclass
 from typing import Optional, Tuple
@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 class TradeDecision:
     allowed: bool
     reason: str
-    position_size_usd: float = 0.0       # How much USD/USDT to allocate
-    amount: float = 0.0                   # Base asset amount
+    position_size_usd: float = 0.0
+    amount: float = 0.0
     stop_loss_price: Optional[float] = None
     take_profit_price: Optional[float] = None
 
@@ -150,6 +150,34 @@ class RiskManager:
             return True, "max_drawdown"
 
         return False, ""
+
+    def update_trailing_stop(
+        self,
+        symbol: str,
+        current_price: float,
+        portfolio: Portfolio,
+        trail_pct: Optional[float] = None,
+    ) -> None:
+        """
+        Trailing stop-loss: moves the stop-loss UP as the price rises.
+        Once moved up, the stop never moves back down.
+        trail_pct defaults to stop_loss_pct from config.
+        """
+        position = portfolio.get_position(symbol)
+        if not position or position.side != "long":
+            return
+
+        trail = trail_pct or self.cfg.stop_loss_pct
+        new_stop = current_price * (1 - trail)
+
+        if position.stop_loss is None or new_stop > position.stop_loss:
+            old_stop = position.stop_loss
+            position.stop_loss = new_stop
+            if old_stop is not None:
+                logger.debug(
+                    f"Trailing SL updated {symbol}: {old_stop:.4f} → {new_stop:.4f} "
+                    f"(price={current_price:.4f})"
+                )
 
     def log_risk_status(self, portfolio: Portfolio) -> None:
         summary = portfolio.summary()

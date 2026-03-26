@@ -34,9 +34,19 @@ class RiskConfig:
     max_position_size_pct: float = 0.10
     stop_loss_pct: float = 0.02
     take_profit_pct: float = 0.04
+    trailing_stop_pct: float = 0.015     # Trail stop at 1.5% below highest price
+    trailing_stop_enabled: bool = True
     max_open_positions: int = 3
     max_daily_loss_pct: float = 0.05
     max_drawdown_pct: float = 0.15
+
+
+@dataclass
+class AIConfig:
+    enabled: bool = False
+    api_key: str = ""                    # Set via ANTHROPIC_API_KEY env var
+    model: str = "claude-haiku-4-5-20251001"   # Fast + cheap for signal validation
+    confidence_threshold: float = 0.6   # Min AI confidence to pass signal through
 
 
 @dataclass
@@ -78,6 +88,7 @@ class BotConfig:
     trading: TradingConfig = field(default_factory=TradingConfig)
     portfolio: PortfolioConfig = field(default_factory=PortfolioConfig)
     risk: RiskConfig = field(default_factory=RiskConfig)
+    ai: AIConfig = field(default_factory=AIConfig)
     strategy_params: StrategyParams = field(default_factory=StrategyParams)
     backtesting: BacktestConfig = field(default_factory=BacktestConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
@@ -134,6 +145,15 @@ def load_config(config_path: str = "config.yaml") -> BotConfig:
         cfg.risk.max_open_positions = r.get("max_open_positions", cfg.risk.max_open_positions)
         cfg.risk.max_daily_loss_pct = r.get("max_daily_loss_pct", cfg.risk.max_daily_loss_pct)
         cfg.risk.max_drawdown_pct = r.get("max_drawdown_pct", cfg.risk.max_drawdown_pct)
+        cfg.risk.trailing_stop_pct = r.get("trailing_stop_pct", cfg.risk.trailing_stop_pct)
+        cfg.risk.trailing_stop_enabled = r.get("trailing_stop_enabled", cfg.risk.trailing_stop_enabled)
+
+    # AI
+    if "ai" in raw:
+        a = raw["ai"]
+        cfg.ai.enabled = a.get("enabled", cfg.ai.enabled)
+        cfg.ai.model = a.get("model", cfg.ai.model)
+        cfg.ai.confidence_threshold = a.get("confidence_threshold", cfg.ai.confidence_threshold)
 
     # Strategy params
     if "strategies" in raw:
@@ -179,6 +199,9 @@ def load_config(config_path: str = "config.yaml") -> BotConfig:
         cfg.exchange.name = os.environ["EXCHANGE_NAME"]
     if os.environ.get("DRY_RUN", "").lower() == "false":
         cfg.trading.dry_run = False
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        cfg.ai.api_key = os.environ["ANTHROPIC_API_KEY"]
+        cfg.ai.enabled = True
 
     return cfg
 

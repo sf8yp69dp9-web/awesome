@@ -10,6 +10,8 @@ from .portfolio import Portfolio
 from .risk import RiskManager
 from .strategies import STRATEGY_REGISTRY
 from .strategies.base import Signal
+from .ai_validator import AISignalValidator
+from .reporter import Reporter
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +58,8 @@ class TradingEngine:
         self.strategy = STRATEGY_REGISTRY[strategy_name](strategy_params)
         logger.info(f"Strategy: {strategy_name}")
 
+        self.ai_validator = AISignalValidator(config.ai)
+        self.reporter = Reporter(config)
         self._running = False
         self._tick_count = 0
 
@@ -111,20 +115,31 @@ class TradingEngine:
 
         current_price = float(df["close"].iloc[-1])
 
-        # 2. Check exit conditions on open positions
+        # 2. Update trailing stop on open position
+        if self.portfolio.has_position(symbol) and self.cfg.risk.trailing_stop_enabled:
+            self.risk.update_trailing_stop(
+                symbol, current_price, self.portfolio,
+                trail_pct=self.cfg.risk.trailing_stop_pct,
+            )
+
+        # 3. Check exit conditions on open positions
         if self.portfolio.has_position(symbol):
             should_exit, exit_reason = self.risk.check_exit_conditions(symbol, current_price, self.portfolio)
             if should_exit:
                 self._execute_sell(symbol, current_price, reason=exit_reason)
                 return  # Don't re-enter on same tick
 
-        # 3. Generate strategy signal
+        # 4. Generate strategy signal
         result = self.strategy.generate_signal(df)
         logger.info(f"{symbol} @ {current_price:.4f} | Signal: {result.signal.value} | {result.reason}")
 
-        # 4. Act on signal
+        # 5. Validate signal with AI (if enabled)
         if result.signal == Signal.BUY and not self.portfolio.has_position(symbol):
-            self._try_buy(symbol, current_price)
+            validation = self.ai_validator.validate(symbol, result, df, current_price)
+            if validation.approved:
+                self._try_buy(symbol, current_price)
+            elif not validation.skipped:
+                logger.info(f"[AI] BUY blocked for {symbol}: {validation.reasoning}")
 
         elif result.signal == Signal.SELL and self.portfolio.has_position(symbol):
             self._execute_sell(symbol, current_price, reason="signal")
