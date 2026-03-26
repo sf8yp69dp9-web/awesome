@@ -1,5 +1,7 @@
 """Risk management: position sizing, stop/take, trailing stop, daily loss limits, drawdown guard."""
 import logging
+import numpy as np
+import pandas as pd
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
@@ -32,6 +34,20 @@ class RiskManager:
     def __init__(self, config: RiskConfig):
         self.cfg = config
 
+    @staticmethod
+    def _compute_atr(df: pd.DataFrame, period: int = 14) -> float:
+        """Average True Range — measures recent volatility."""
+        high = df["high"]
+        low  = df["low"]
+        prev_close = df["close"].shift(1)
+        tr = pd.concat([
+            high - low,
+            (high - prev_close).abs(),
+            (low  - prev_close).abs(),
+        ], axis=1).max(axis=1)
+        atr = tr.ewm(alpha=1.0 / period, adjust=False).mean()
+        return float(atr.iloc[-1])
+
     def evaluate_trade(
         self,
         portfolio: Portfolio,
@@ -39,6 +55,7 @@ class RiskManager:
         side: str,
         current_price: float,
         min_order_amount: float = 0.0,
+        df: Optional[pd.DataFrame] = None,
     ) -> TradeDecision:
         """
         Check if a trade is allowed and calculate position size.
@@ -95,17 +112,35 @@ class RiskManager:
                 reason=f"Order amount {amount:.8f} below minimum {min_order_amount:.8f}",
             )
 
-        # 7. Compute stop-loss and take-profit prices
+        # 7. Compute stop-loss and take-profit prices (ATR-based when possible)
+        use_atr = (
+            self.cfg.atr_stop_enabled
+            and df is not None
+            and len(df) >= self.cfg.atr_period + 2
+        )
+
+        if use_atr:
+            atr = self._compute_atr(df, self.cfg.atr_period)
+            atr_dist = self.cfg.atr_multiplier * atr
+            # Safety bounds: never wider than 3× fixed %, never tighter than 0.5× fixed %
+            min_dist = current_price * self.cfg.stop_loss_pct * 0.5
+            max_dist = current_price * self.cfg.stop_loss_pct * 3.0
+            atr_dist = max(min_dist, min(atr_dist, max_dist))
+        else:
+            atr = None
+            atr_dist = current_price * self.cfg.stop_loss_pct
+
         if side == "long":
-            stop_loss_price = current_price * (1 - self.cfg.stop_loss_pct)
+            stop_loss_price  = current_price - atr_dist
             take_profit_price = current_price * (1 + self.cfg.take_profit_pct)
         else:
-            stop_loss_price = current_price * (1 + self.cfg.stop_loss_pct)
+            stop_loss_price  = current_price + atr_dist
             take_profit_price = current_price * (1 - self.cfg.take_profit_pct)
 
+        sl_mode = f"ATR×{self.cfg.atr_multiplier}={atr:.2f}" if atr else "fixed%"
         logger.debug(
             f"Trade approved: {symbol} {side} {amount:.6f} @ {current_price:.4f} "
-            f"SL={stop_loss_price:.4f} TP={take_profit_price:.4f}"
+            f"SL={stop_loss_price:.4f} TP={take_profit_price:.4f} ({sl_mode})"
         )
 
         return TradeDecision(

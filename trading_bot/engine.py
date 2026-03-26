@@ -137,14 +137,14 @@ class TradingEngine:
         if result.signal == Signal.BUY and not self.portfolio.has_position(symbol):
             validation = self.ai_validator.validate(symbol, result, df, current_price)
             if validation.approved:
-                self._try_buy(symbol, current_price)
+                self._try_buy(symbol, current_price, df=df)
             elif not validation.skipped:
                 logger.info(f"[AI] BUY blocked for {symbol}: {validation.reasoning}")
 
         elif result.signal == Signal.SELL and self.portfolio.has_position(symbol):
             self._execute_sell(symbol, current_price, reason="signal")
 
-    def _try_buy(self, symbol: str, current_price: float) -> None:
+    def _try_buy(self, symbol: str, current_price: float, df=None) -> None:
         """Evaluate risk and place a buy order if approved."""
         min_amount = self.exchange.get_min_order_amount(symbol)
         decision = self.risk.evaluate_trade(
@@ -153,6 +153,7 @@ class TradingEngine:
             side="long",
             current_price=current_price,
             min_order_amount=min_amount,
+            df=df,
         )
 
         if not decision.allowed:

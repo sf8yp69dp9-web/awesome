@@ -36,6 +36,9 @@ class RiskConfig:
     take_profit_pct: float = 0.04
     trailing_stop_pct: float = 0.015     # Trail stop at 1.5% below highest price
     trailing_stop_enabled: bool = True
+    atr_period: int = 14                 # ATR lookback for dynamic stop placement
+    atr_multiplier: float = 3.0          # Stop = entry - (atr_multiplier × ATR)
+    atr_stop_enabled: bool = True        # Use ATR stops; falls back to fixed % if False
     max_open_positions: int = 3
     max_daily_loss_pct: float = 0.05
     max_drawdown_pct: float = 0.15
@@ -64,6 +67,11 @@ class StrategyParams:
     macd_fast: int = 12
     macd_slow: int = 26
     macd_signal: int = 9
+    # Ensemble filters
+    adx_period: int = 14
+    adx_threshold: float = 15.0
+    volume_window: int = 20
+    volume_multiplier: float = 0.0   # 0 = disabled; set >1.0 with real exchange data
 
 
 @dataclass
@@ -147,6 +155,9 @@ def load_config(config_path: str = "config.yaml") -> BotConfig:
         cfg.risk.max_drawdown_pct = r.get("max_drawdown_pct", cfg.risk.max_drawdown_pct)
         cfg.risk.trailing_stop_pct = r.get("trailing_stop_pct", cfg.risk.trailing_stop_pct)
         cfg.risk.trailing_stop_enabled = r.get("trailing_stop_enabled", cfg.risk.trailing_stop_enabled)
+        cfg.risk.atr_period = r.get("atr_period", cfg.risk.atr_period)
+        cfg.risk.atr_multiplier = r.get("atr_multiplier", cfg.risk.atr_multiplier)
+        cfg.risk.atr_stop_enabled = r.get("atr_stop_enabled", cfg.risk.atr_stop_enabled)
 
     # AI
     if "ai" in raw:
@@ -173,6 +184,12 @@ def load_config(config_path: str = "config.yaml") -> BotConfig:
         cfg.strategy_params.macd_fast = macd.get("fast_period", cfg.strategy_params.macd_fast)
         cfg.strategy_params.macd_slow = macd.get("slow_period", cfg.strategy_params.macd_slow)
         cfg.strategy_params.macd_signal = macd.get("signal_period", cfg.strategy_params.macd_signal)
+
+        ens = s.get("ensemble", {})
+        cfg.strategy_params.adx_period = ens.get("adx_period", cfg.strategy_params.adx_period)
+        cfg.strategy_params.adx_threshold = ens.get("adx_threshold", cfg.strategy_params.adx_threshold)
+        cfg.strategy_params.volume_window = ens.get("volume_window", cfg.strategy_params.volume_window)
+        cfg.strategy_params.volume_multiplier = ens.get("volume_multiplier", cfg.strategy_params.volume_multiplier)
 
     # Backtesting
     if "backtesting" in raw:

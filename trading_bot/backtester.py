@@ -9,7 +9,7 @@ import pandas as pd
 
 from .config import BotConfig
 from .portfolio import Portfolio, Trade
-from .risk import RiskManager
+from .risk import RiskManager, RiskConfig
 from .strategies import STRATEGY_REGISTRY
 from .strategies.base import Signal
 
@@ -85,6 +85,7 @@ class Backtester:
         strategy_params = vars(config.strategy_params)
         self.strategy = STRATEGY_REGISTRY[strategy_name](strategy_params)
         self.risk_cfg = config.risk
+        self.risk_mgr = RiskManager(config.risk)
 
     def run(self, df: pd.DataFrame, symbol: str) -> BacktestMetrics:
         """
@@ -149,12 +150,22 @@ class Backtester:
 
                 if cost <= cash and amount > 0:
                     cash -= cost
+                    # ATR-based stop or fixed fallback
+                    use_atr = self.risk_cfg.atr_stop_enabled and len(window) >= self.risk_cfg.atr_period + 2
+                    if use_atr:
+                        atr = self.risk_mgr._compute_atr(window, self.risk_cfg.atr_period)
+                        atr_dist = self.risk_cfg.atr_multiplier * atr
+                        min_d = current_price * self.risk_cfg.stop_loss_pct * 0.5
+                        max_d = current_price * self.risk_cfg.stop_loss_pct * 3.0
+                        sl_dist = max(min_d, min(atr_dist, max_d))
+                    else:
+                        sl_dist = current_price * self.risk_cfg.stop_loss_pct
                     position = {
                         "symbol": symbol,
                         "entry_price": current_price,
                         "amount": amount,
                         "entry_time": current_time,
-                        "stop_loss": current_price * (1 - self.risk_cfg.stop_loss_pct),
+                        "stop_loss": current_price - sl_dist,
                         "take_profit": current_price * (1 + self.risk_cfg.take_profit_pct),
                     }
 

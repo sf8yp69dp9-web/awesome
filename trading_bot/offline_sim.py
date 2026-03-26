@@ -158,7 +158,7 @@ class OfflinePaperTrader:
             if result.signal == Signal.BUY and not self.portfolio.has_position(self._symbol):
                 validation = self.ai_validator.validate(self._symbol, result, window, current_price)
                 if validation.approved:
-                    self._buy(sim, self._symbol, current_price)
+                    self._buy(sim, self._symbol, current_price, df=window)
                 elif not validation.skipped:
                     logger.info(f"[AI] BUY blocked for {self._symbol}: {validation.reasoning}")
             elif result.signal == Signal.SELL and self.portfolio.has_position(self._symbol):
@@ -187,8 +187,8 @@ class OfflinePaperTrader:
         report_path = self.reporter.save_report(self.portfolio)
         print(f"\nReport saved: {report_path}")
 
-    def _buy(self, sim: SimulatedExchange, symbol: str, price: float) -> None:
-        decision = self.risk.evaluate_trade(self.portfolio, symbol, "long", price, sim.get_min_order_amount(symbol))
+    def _buy(self, sim: SimulatedExchange, symbol: str, price: float, df=None) -> None:
+        decision = self.risk.evaluate_trade(self.portfolio, symbol, "long", price, sim.get_min_order_amount(symbol), df=df)
         if not decision.allowed:
             return
         precision = sim.get_amount_precision(symbol)

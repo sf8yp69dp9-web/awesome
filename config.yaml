@@ -25,10 +25,13 @@ portfolio:
 
 risk:
   max_position_size_pct: 0.10   # Max 10% of portfolio per trade
-  stop_loss_pct: 0.02           # 2% initial stop-loss per trade
+  stop_loss_pct: 0.02           # Fallback fixed stop-loss (used if ATR unavailable)
   take_profit_pct: 0.04         # 4% take-profit per trade
   trailing_stop_pct: 0.015      # 1.5% trailing stop (ratchets up as price rises)
   trailing_stop_enabled: true   # Enable trailing stop-loss
+  atr_period: 14                # ATR lookback for dynamic stop placement
+  atr_multiplier: 3.0           # Stop = entry - (atr_multiplier × ATR)
+  atr_stop_enabled: true        # Dynamic ATR stops (better than fixed %)
   max_open_positions: 3         # Max simultaneous open trades
   max_daily_loss_pct: 0.05      # Stop trading if daily loss > 5%
   max_drawdown_pct: 0.15        # Stop trading if drawdown > 15%
@@ -56,6 +59,12 @@ strategies:
     fast_period: 12
     slow_period: 26
     signal_period: 9
+
+  ensemble:
+    adx_period: 14            # ADX lookback period
+    adx_threshold: 15.0       # Min ADX to consider market trending (skip if ranging)
+    volume_window: 20         # Bars to average for volume baseline
+    volume_multiplier: 0.0    # 0 = disabled; >1.0 = require spike (meaningful with real exchange data)
 
 backtesting:
   start_date: "2024-01-01"
