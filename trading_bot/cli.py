@@ -204,6 +204,31 @@ def backtest(ctx, symbol, strategy, start, end, capital, all_strategies):
 
 
 @cli.command()
+@click.option("--auto", is_flag=True, help="Trades automatisch ausführen (Standard: nur Alerts)")
+@click.option("--capital", type=float, default=None, help="Kapital pro Trade in USDT")
+@click.pass_context
+def arbitrage(ctx, auto, capital):
+    """Dreiecks-Arbitrage Bot — sucht Preisunterschiede auf Binance."""
+    from .arbitrage_engine import ArbitrageEngine
+
+    cfg = ctx.obj["config"]
+    if capital:
+        cfg.portfolio.initial_capital = capital
+
+    mode = "AUTO-EXECUTE" if auto else "ALERT-ONLY"
+    _startup_animation(mode, "triangular-arbitrage", "BTC/ETH/BNB")
+
+    if auto:
+        console.print("[bold yellow]⚠ AUTO-EXECUTE Modus — Trades werden ausgeführt![/bold yellow]")
+        if not click.confirm("Sicher?"):
+            console.print("Abgebrochen.")
+            return
+
+    engine = ArbitrageEngine(cfg, auto_execute=auto)
+    engine.run()
+
+
+@cli.command()
 @click.pass_context
 def status(ctx):
     """Show current portfolio status and recent trades from the trade log."""

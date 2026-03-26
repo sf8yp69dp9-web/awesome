@@ -180,6 +180,10 @@ class TelegramNotifier:
             explanation=explanation,
         )
 
+    def send(self, text: str) -> None:
+        """Öffentliche Methode für direkte Nachrichten (z.B. Arbitrage-Alerts)."""
+        self._send(text)
+
     def error(self, message: str) -> None:
         self._send(f"⚠️ <b>Bot-Fehler</b>\n\n<code>{message[:400]}</code>")
 

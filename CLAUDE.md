@@ -128,6 +128,7 @@ trading_bot/
 | **Sentiment Analyzer** | ✅ | sentiment.py |
 | **AI-Assistent** | ✅ | ai_assistant.py |
 | **Content Creator** | ✅ | content_creator.py |
+| **Arbitrage Bot** | ✅ | arbitrage_scanner.py + arbitrage_engine.py |
 
 ---
 
