@@ -1,0 +1,22 @@
+# Secrets — NEVER commit these
+.env
+config.local.yaml
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Data and logs
+trading_bot/data/
+logs/
+reports/
+
+# IDE
+.vscode/
+.idea/
+*.swp
