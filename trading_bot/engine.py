@@ -13,6 +13,9 @@ from .strategies.base import Signal
 from .ai_validator import AISignalValidator
 from .reporter import Reporter
 from .telegram_notifier import TelegramNotifier
+from .telegram_commander import TelegramCommander
+from .web_dashboard import WebDashboard
+from .fear_greed import get_fear_greed, position_size_multiplier, emoji as fg_emoji
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +65,9 @@ class TradingEngine:
         self.ai_validator = AISignalValidator(config.ai)
         self.reporter = Reporter(config)
         self.telegram = TelegramNotifier(config.telegram.token, config.telegram.chat_id)
+        self.commander = TelegramCommander(config.telegram.token, config.telegram.chat_id)
+        self.dashboard = WebDashboard(port=8080)
+        self._fear_greed_mult = 1.0
         self._running = False
         self._tick_count = 0
 
@@ -81,6 +87,15 @@ class TradingEngine:
             mode=mode,
         )
 
+        # Start dashboard and commander
+        self.dashboard.set_portfolio(self.portfolio, mode)
+        self.dashboard.start()
+
+        self.commander.on_stop = self.stop
+        self.commander.on_status = self._status_text
+        self.commander.on_portfolio = self._portfolio_text
+        self.commander.start()
+
         try:
             while self._running:
                 self._tick()
@@ -97,6 +112,7 @@ class TradingEngine:
         except KeyboardInterrupt:
             logger.info("Interrupted by user. Shutting down gracefully...")
         finally:
+            self.commander.stop()
             self._shutdown()
 
     def stop(self) -> None:
@@ -107,14 +123,19 @@ class TradingEngine:
         now = datetime.now(timezone.utc).strftime("%H:%M:%S")
         logger.info(f"--- Tick #{self._tick_count + 1} @ {now} ---")
 
+        # Refresh Fear & Greed multiplier (cached daily)
+        fg = get_fear_greed()
+        self._fear_greed_mult = position_size_multiplier(fg["value"])
+        logger.debug(f"Fear & Greed: {fg['value']} ({fg['label']}) → size ×{self._fear_greed_mult}")
+
         for symbol in self.cfg.trading.symbols:
             try:
                 self._process_symbol(symbol)
             except Exception as e:
                 logger.error(f"Error processing {symbol}: {e}", exc_info=True)
 
+        self.dashboard.record_equity(self.portfolio.total_value)
         self.risk.log_risk_status(self.portfolio)
-        # Daily summary at configured hour
         self.telegram.check_and_send_daily_summary(
             self.portfolio,
             target_hour_utc=self.cfg.telegram.daily_summary_hour,
@@ -160,6 +181,10 @@ class TradingEngine:
 
     def _try_buy(self, symbol: str, current_price: float, df=None, signal_result=None) -> None:
         """Evaluate risk and place a buy order if approved."""
+        if self.commander.is_paused:
+            logger.info(f"Bot paused via Telegram — skipping BUY for {symbol}")
+            return
+
         min_amount = self.exchange.get_min_order_amount(symbol)
         decision = self.risk.evaluate_trade(
             portfolio=self.portfolio,
@@ -173,6 +198,12 @@ class TradingEngine:
         if not decision.allowed:
             logger.info(f"Trade blocked for {symbol}: {decision.reason}")
             return
+
+        # Apply Fear & Greed size multiplier
+        if self._fear_greed_mult != 1.0:
+            adjusted = min(decision.position_size_usd * self._fear_greed_mult, self.portfolio.cash * 0.99)
+            decision.position_size_usd = adjusted
+            decision.amount = adjusted / current_price
 
         precision = self.exchange.get_amount_precision(symbol)
         amount = round(decision.amount, precision if isinstance(precision, int) else 8)
@@ -246,6 +277,36 @@ class TradingEngine:
         next_candle = ((now_ts // candle_seconds) + 1) * candle_seconds
         sleep = max(10, next_candle - now_ts - 5)  # 5s before candle close
         return sleep
+
+    def _status_text(self) -> str:
+        s = self.portfolio.summary()
+        ret = s.get("total_return_pct", (s["current_value"] - s["initial_capital"]) / s["initial_capital"] * 100)
+        fg = get_fear_greed()
+        mode = "PAPER" if self.is_dry_run else "LIVE"
+        return (
+            f"📊 <b>Status — {mode}</b>\n"
+            f"Wert: <b>{s['current_value']:.2f} USDT</b>\n"
+            f"Rendite: {ret:+.2f}%\n"
+            f"Drawdown: {s['drawdown_pct']:.2f}%\n"
+            f"Trades: {s['total_trades']} | Win Rate: {s['win_rate_pct']:.1f}%\n"
+            f"Offene Pos.: {s['open_positions']}\n"
+            f"Fear & Greed: {fg_emoji(fg['value'])} {fg['value']} ({fg['label']}) → ×{self._fear_greed_mult}"
+        )
+
+    def _portfolio_text(self) -> str:
+        s = self.portfolio.summary()
+        lines = [
+            f"📈 <b>Portfolio Detail</b>",
+            f"Kapital: {s['initial_capital']:.2f} → {s['current_value']:.2f} USDT",
+        ]
+        for sym, pos in self.portfolio.positions.items():
+            lines.append(f"• {sym}: {pos.amount:.6f} @ {pos.entry_price:.2f}")
+        recent = self.portfolio.trade_history[-5:]
+        if recent:
+            lines.append("\n<b>Letzte Trades:</b>")
+            for t in reversed(recent):
+                lines.append(f"• {t.symbol}: {t.pnl:+.2f} USDT ({t.reason})")
+        return "\n".join(lines)
 
     def _shutdown(self) -> None:
         summary = self.portfolio.summary()

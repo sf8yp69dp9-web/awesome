@@ -153,7 +153,7 @@ class Backtester:
                     # ATR-based stop or fixed fallback
                     use_atr = self.risk_cfg.atr_stop_enabled and len(window) >= self.risk_cfg.atr_period + 2
                     if use_atr:
-                        atr = self.risk_mgr._compute_atr(window, self.risk_cfg.atr_period)
+                        atr = RiskManager._compute_atr(window, self.risk_cfg.atr_period)
                         atr_dist = self.risk_cfg.atr_multiplier * atr
                         min_d = current_price * self.risk_cfg.stop_loss_pct * 0.5
                         max_d = current_price * self.risk_cfg.stop_loss_pct * 3.0

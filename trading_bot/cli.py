@@ -1,15 +1,59 @@
 """Command-line interface for the trading bot."""
 import logging
 import sys
+import time
 from pathlib import Path
 
 import click
 from rich.console import Console
+from rich.text import Text
 
 from .config import load_config
 from .logger import setup_logging
 
 console = Console()
+
+_BANNER = r"""
+ ████████╗██████╗  █████╗ ██████╗ ██╗███╗   ██╗ ██████╗
+    ██╔══╝██╔══██╗██╔══██╗██╔══██╗██║████╗  ██║██╔════╝
+    ██║   ██████╔╝███████║██║  ██║██║██╔██╗ ██║██║  ███╗
+    ██║   ██╔══██╗██╔══██║██║  ██║██║██║╚██╗██║██║   ██║
+    ██║   ██║  ██║██║  ██║██████╔╝██║██║ ╚████║╚██████╔╝
+    ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝ ╚═════╝
+           ███╗   ███╗ █████╗ ███████╗ ██████╗██╗  ██╗
+           ████╗ ████║██╔══██╗██╔════╝██╔════╝██║  ██║
+           ██╔████╔██║███████║███████╗██║     ███████║
+           ██║╚██╔╝██║██╔══██║╚════██║██║     ██╔══██║
+           ██║ ╚═╝ ██║██║  ██║███████║╚██████╗██║  ██║
+           ╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝ ╚═════╝╚═╝  ╚═╝
+"""
+
+def _startup_animation(mode: str, strategy: str, symbol: str) -> None:
+    colors = ["bright_cyan", "cyan", "bright_blue", "blue", "bright_cyan"]
+    for color in colors:
+        console.clear()
+        console.print(Text(_BANNER, style=f"bold {color}"), highlight=False)
+        time.sleep(0.08)
+
+    console.clear()
+    console.print(Text(_BANNER, style="bold bright_cyan"), highlight=False)
+
+    bar_chars = "▁▂▃▄▅▆▇█▇▆▅▄▃▂▁"
+    bar = " ".join(bar_chars)
+    console.print(f"  [dim cyan]{bar}[/dim cyan]")
+    console.print()
+    console.print(f"  [bold white]Mode:[/bold white]     [{'green' if mode == 'PAPER' else 'red'}]{mode}[/{'green' if mode == 'PAPER' else 'red'}]")
+    console.print(f"  [bold white]Strategy:[/bold white] [yellow]{strategy}[/yellow]")
+    console.print(f"  [bold white]Symbol:[/bold white]   [cyan]{symbol}[/cyan]")
+    console.print(f"  [bold white]Dashboard:[/bold white] [blue]http://localhost:8080[/blue]")
+    console.print()
+
+    dots = ""
+    for _ in range(3):
+        dots += "."
+        console.print(f"  [dim]Starting{dots}[/dim]", end="\r")
+        time.sleep(0.3)
+    console.print()
 
 
 @click.group()
@@ -46,7 +90,7 @@ def paper(ctx, symbol, strategy, capital):
     if capital:
         cfg.portfolio.initial_capital = capital
 
-    console.print(f"[green]Starting paper trading[/green] | Strategy: [yellow]{cfg.trading.strategy}[/yellow]")
+    _startup_animation("PAPER", cfg.trading.strategy, cfg.trading.symbols[0] if cfg.trading.symbols else "BTC/USDT")
 
     # Try live paper trading; fall back to offline simulation if no network
     try:
@@ -96,6 +140,7 @@ def live(ctx, symbol, strategy):
         console.print("Aborted.")
         return
 
+    _startup_animation("LIVE", cfg.trading.strategy, cfg.trading.symbols[0] if cfg.trading.symbols else "BTC/USDT")
     cfg.trading.dry_run = False
     engine = TradingEngine(cfg, dry_run=False)
     engine.run()

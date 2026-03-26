@@ -63,6 +63,11 @@ Approve the signal if the price action supports it. Reject if:
 
 Be decisive. Don't overthink. Low confidence (< 0.5) means reject."""
 
+    EXPLAIN_PROMPT_DE = """Du bist ein freundlicher Krypto-Trading-Assistent.
+Erkläre in 2-3 kurzen, klaren deutschen Sätzen warum dieser Trade gemacht wurde.
+Schreibe direkt und verständlich — kein Fachjargon, keine Floskeln.
+Antworte NUR mit dem Erklärungstext, kein JSON, keine Aufzählung."""
+
     def __init__(self, config: AIConfig):
         self.cfg = config
         self._client = None
@@ -125,7 +130,7 @@ Be decisive. Don't overthink. Low confidence (< 0.5) means reject."""
         for ts, row in recent.iterrows():
             ts_str = ts.strftime("%m-%d %H:%M") if hasattr(ts, 'strftime') else str(ts)
             candle_lines.append(
-                f"{ts_str} | O:{row['close']:.2f} H:{row['high']:.2f} "
+                f"{ts_str} | O:{row['open']:.2f} H:{row['high']:.2f} "
                 f"L:{row['low']:.2f} C:{row['close']:.2f} V:{row['volume']:.0f}"
             )
 
@@ -190,10 +195,12 @@ Should I {signal.signal.value.upper()} {symbol} at {current_price:.4f}?"""
         if risk_notes:
             logger.info(f"AI Risk: {risk_notes}")
 
-    EXPLAIN_PROMPT_DE = """Du bist ein freundlicher Krypto-Trading-Assistent.
-Erkläre in 2-3 kurzen, klaren deutschen Sätzen warum dieser Trade gemacht wurde.
-Schreibe direkt und verständlich — kein Fachjargon, keine Floskeln.
-Antworte NUR mit dem Erklärungstext, kein JSON, keine Aufzählung."""
+        return AIValidation(
+            approved=approved,
+            confidence=confidence,
+            reasoning=reasoning,
+            risk_notes=risk_notes,
+        )
 
     def explain_trade_de(
         self,

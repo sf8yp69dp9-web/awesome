@@ -15,6 +15,8 @@ from .strategies.base import Signal
 from .reporter import Reporter
 from .ai_validator import AISignalValidator
 from .telegram_notifier import TelegramNotifier
+from .web_dashboard import WebDashboard
+from .fear_greed import get_fear_greed, position_size_multiplier
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +114,7 @@ class OfflinePaperTrader:
         self.reporter = Reporter(config)
         self.ai_validator = AISignalValidator(config.ai)
         self.telegram = TelegramNotifier(config.telegram.token, config.telegram.chat_id)
+        self.dashboard = WebDashboard(port=8080)
         self._symbol = config.trading.symbols[0]
 
     def run(self, candles: int = 8784, print_every: int = 100) -> None:
@@ -125,10 +128,13 @@ class OfflinePaperTrader:
         )
 
         sim = SimulatedExchange(df, self._symbol)
+        self.dashboard.set_portfolio(self.portfolio, "OFFLINE-SIM")
+        self.dashboard.start()
         self.reporter.print_header()
 
         tick = 0
         last_status_tick = 0
+        fear_greed_mult = 1.0
 
         while True:
             window = sim.next_tick()
@@ -138,6 +144,11 @@ class OfflinePaperTrader:
             tick += 1
             current_price = sim.current_price
             current_time = sim.current_time
+
+            # Refresh Fear & Greed once every 100 ticks (cached daily anyway)
+            if tick % 100 == 1:
+                fg = get_fear_greed()
+                fear_greed_mult = position_size_multiplier(fg["value"])
 
             # Update trailing stop on open position
             if self.portfolio.has_position(self._symbol) and self.cfg.risk.trailing_stop_enabled:
@@ -160,11 +171,13 @@ class OfflinePaperTrader:
             if result.signal == Signal.BUY and not self.portfolio.has_position(self._symbol):
                 validation = self.ai_validator.validate(self._symbol, result, window, current_price)
                 if validation.approved:
-                    self._buy(sim, self._symbol, current_price, df=window, signal_result=result)
+                    self._buy(sim, self._symbol, current_price, df=window, signal_result=result, fg_mult=fear_greed_mult)
                 elif not validation.skipped:
                     logger.info(f"[AI] BUY blocked for {self._symbol}: {validation.reasoning}")
             elif result.signal == Signal.SELL and self.portfolio.has_position(self._symbol):
                 self._sell(sim, self._symbol, current_price, "signal")
+
+            self.dashboard.record_equity(self.portfolio.total_value)
 
             # Print status every N ticks
             if tick - last_status_tick >= print_every:
@@ -189,10 +202,14 @@ class OfflinePaperTrader:
         report_path = self.reporter.save_report(self.portfolio)
         print(f"\nReport saved: {report_path}")
 
-    def _buy(self, sim: SimulatedExchange, symbol: str, price: float, df=None, signal_result=None) -> None:
+    def _buy(self, sim: SimulatedExchange, symbol: str, price: float, df=None, signal_result=None, fg_mult: float = 1.0) -> None:
         decision = self.risk.evaluate_trade(self.portfolio, symbol, "long", price, sim.get_min_order_amount(symbol), df=df)
         if not decision.allowed:
             return
+        if fg_mult != 1.0:
+            adjusted = min(decision.position_size_usd * fg_mult, self.portfolio.cash * 0.99)
+            decision.position_size_usd = adjusted
+            decision.amount = adjusted / price
         precision = sim.get_amount_precision(symbol)
         amount = round(decision.amount, precision)
         order = sim.create_market_buy(symbol, amount)

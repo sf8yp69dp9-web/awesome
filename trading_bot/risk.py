@@ -37,6 +37,8 @@ class RiskManager:
     @staticmethod
     def _compute_atr(df: pd.DataFrame, period: int = 14) -> float:
         """Average True Range — measures recent volatility."""
+        tail = period * 3
+        df = df.iloc[-tail:] if len(df) > tail else df
         high = df["high"]
         low  = df["low"]
         prev_close = df["close"].shift(1)

@@ -152,7 +152,7 @@ class TelegramNotifier:
             lines += ["", "🤖 <i>KI-Zusammenfassung:</i>", f"<i>{explanation}</i>"]
 
         self._send("\n".join(lines))
-        self._last_summary_date = date.today()
+        self._last_summary_date = datetime.now(timezone.utc).date()
 
     def check_and_send_daily_summary(
         self,
