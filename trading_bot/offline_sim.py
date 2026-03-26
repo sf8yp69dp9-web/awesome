@@ -17,6 +17,7 @@ from .ai_validator import AISignalValidator
 from .telegram_notifier import TelegramNotifier
 from .web_dashboard import WebDashboard
 from .fear_greed import get_fear_greed, position_size_multiplier
+from .sentiment import get_sentiment, trade_allowed as sentiment_allowed, position_multiplier as sentiment_mult
 
 logger = logging.getLogger(__name__)
 
@@ -135,6 +136,8 @@ class OfflinePaperTrader:
         tick = 0
         last_status_tick = 0
         fear_greed_mult = 1.0
+        sentiment_score = 0.0
+        sentiment_data: dict = {}
 
         while True:
             window = sim.next_tick()
@@ -145,10 +148,14 @@ class OfflinePaperTrader:
             current_price = sim.current_price
             current_time = sim.current_time
 
-            # Refresh Fear & Greed once every 100 ticks (cached daily anyway)
+            # Refresh Fear & Greed + Sentiment every 100 ticks
             if tick % 100 == 1:
                 fg = get_fear_greed()
                 fear_greed_mult = position_size_multiplier(fg["value"])
+                sent = get_sentiment(self._symbol, use_ai=False)
+                sentiment_score = sent["score"]
+                sentiment_data = {self._symbol: sent}
+                self.dashboard.set_sentiment(sentiment_data)
 
             # Update trailing stop on open position
             if self.portfolio.has_position(self._symbol) and self.cfg.risk.trailing_stop_enabled:
@@ -169,11 +176,15 @@ class OfflinePaperTrader:
             result = self.strategy.generate_signal(window)
 
             if result.signal == Signal.BUY and not self.portfolio.has_position(self._symbol):
-                validation = self.ai_validator.validate(self._symbol, result, window, current_price)
-                if validation.approved:
-                    self._buy(sim, self._symbol, current_price, df=window, signal_result=result, fg_mult=fear_greed_mult)
-                elif not validation.skipped:
-                    logger.info(f"[AI] BUY blocked for {self._symbol}: {validation.reasoning}")
+                if not sentiment_allowed(sentiment_score):
+                    logger.debug(f"[SENTIMENT] BUY blockiert: score={sentiment_score:.2f}")
+                else:
+                    validation = self.ai_validator.validate(self._symbol, result, window, current_price)
+                    if validation.approved:
+                        combined_mult = fear_greed_mult * sentiment_mult(sentiment_score)
+                        self._buy(sim, self._symbol, current_price, df=window, signal_result=result, fg_mult=combined_mult)
+                    elif not validation.skipped:
+                        logger.info(f"[AI] BUY blocked for {self._symbol}: {validation.reasoning}")
             elif result.signal == Signal.SELL and self.portfolio.has_position(self._symbol):
                 self._sell(sim, self._symbol, current_price, "signal")
 

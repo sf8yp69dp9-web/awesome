@@ -16,6 +16,7 @@ from .telegram_notifier import TelegramNotifier
 from .telegram_commander import TelegramCommander
 from .web_dashboard import WebDashboard
 from .fear_greed import get_fear_greed, position_size_multiplier, emoji as fg_emoji
+from .sentiment import get_sentiment, trade_allowed as sentiment_allowed, position_multiplier as sentiment_mult, emoji as sent_emoji
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +69,7 @@ class TradingEngine:
         self.commander = TelegramCommander(config.telegram.token, config.telegram.chat_id)
         self.dashboard = WebDashboard(port=8080)
         self._fear_greed_mult = 1.0
+        self._sentiment: dict[str, dict] = {}   # symbol → sentiment result
         self._running = False
         self._tick_count = 0
 
@@ -135,6 +137,7 @@ class TradingEngine:
                 logger.error(f"Error processing {symbol}: {e}", exc_info=True)
 
         self.dashboard.record_equity(self.portfolio.total_value)
+        self.dashboard.set_sentiment(self._sentiment)
         self.risk.log_risk_status(self.portfolio)
         self.telegram.check_and_send_daily_summary(
             self.portfolio,
@@ -168,18 +171,25 @@ class TradingEngine:
         result = self.strategy.generate_signal(df)
         logger.info(f"{symbol} @ {current_price:.4f} | Signal: {result.signal.value} | {result.reason}")
 
-        # 5. Validate signal with AI (if enabled)
+        # 5. Sentiment-Filter (cached 1h)
+        sent = get_sentiment(symbol, use_ai=self.cfg.ai.enabled)
+        self._sentiment[symbol] = sent
+
+        # 6. Validate signal with AI (if enabled)
         if result.signal == Signal.BUY and not self.portfolio.has_position(symbol):
+            if not sentiment_allowed(sent["score"]):
+                logger.info(f"[SENTIMENT] BUY blockiert für {symbol}: {sent['label']} ({sent['score']:+.2f})")
+                return
             validation = self.ai_validator.validate(symbol, result, df, current_price)
             if validation.approved:
-                self._try_buy(symbol, current_price, df=df, signal_result=result)
+                self._try_buy(symbol, current_price, df=df, signal_result=result, sentiment=sent)
             elif not validation.skipped:
                 logger.info(f"[AI] BUY blocked for {symbol}: {validation.reasoning}")
 
         elif result.signal == Signal.SELL and self.portfolio.has_position(symbol):
             self._execute_sell(symbol, current_price, reason="signal")
 
-    def _try_buy(self, symbol: str, current_price: float, df=None, signal_result=None) -> None:
+    def _try_buy(self, symbol: str, current_price: float, df=None, signal_result=None, sentiment: dict | None = None) -> None:
         """Evaluate risk and place a buy order if approved."""
         if self.commander.is_paused:
             logger.info(f"Bot paused via Telegram — skipping BUY for {symbol}")
@@ -199,9 +209,12 @@ class TradingEngine:
             logger.info(f"Trade blocked for {symbol}: {decision.reason}")
             return
 
-        # Apply Fear & Greed size multiplier
-        if self._fear_greed_mult != 1.0:
-            adjusted = min(decision.position_size_usd * self._fear_greed_mult, self.portfolio.cash * 0.99)
+        # Apply Fear & Greed + Sentiment size multipliers
+        combined_mult = self._fear_greed_mult
+        if sentiment:
+            combined_mult *= sentiment_mult(sentiment["score"])
+        if combined_mult != 1.0:
+            adjusted = min(decision.position_size_usd * combined_mult, self.portfolio.cash * 0.99)
             decision.position_size_usd = adjusted
             decision.amount = adjusted / current_price
 
@@ -283,15 +296,16 @@ class TradingEngine:
         ret = s.get("total_return_pct", (s["current_value"] - s["initial_capital"]) / s["initial_capital"] * 100)
         fg = get_fear_greed()
         mode = "PAPER" if self.is_dry_run else "LIVE"
-        return (
-            f"📊 <b>Status — {mode}</b>\n"
-            f"Wert: <b>{s['current_value']:.2f} USDT</b>\n"
-            f"Rendite: {ret:+.2f}%\n"
-            f"Drawdown: {s['drawdown_pct']:.2f}%\n"
-            f"Trades: {s['total_trades']} | Win Rate: {s['win_rate_pct']:.1f}%\n"
-            f"Offene Pos.: {s['open_positions']}\n"
-            f"Fear & Greed: {fg_emoji(fg['value'])} {fg['value']} ({fg['label']}) → ×{self._fear_greed_mult}"
-        )
+        lines = [
+            f"📊 <b>Status — {mode}</b>",
+            f"Wert: <b>{s['current_value']:.2f} USDT</b>",
+            f"Rendite: {ret:+.2f}%  |  Drawdown: {s['drawdown_pct']:.2f}%",
+            f"Trades: {s['total_trades']}  |  Win Rate: {s['win_rate_pct']:.1f}%",
+            f"Fear & Greed: {fg_emoji(fg['value'])} {fg['value']} ({fg['label']})",
+        ]
+        for sym, sent in self._sentiment.items():
+            lines.append(f"Sentiment {sym}: {sent_emoji(sent['score'])} {sent['label']} ({sent['score']:+.2f})")
+        return "\n".join(lines)
 
     def _portfolio_text(self) -> str:
         s = self.portfolio.summary()

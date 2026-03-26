@@ -63,6 +63,7 @@ _HTML = """<!DOCTYPE html>
 </header>
 
 <div class="grid" id="metrics"></div>
+<div class="grid" id="sentiment"></div>
 <div class="chart-wrap"><h2>Equity Kurve</h2><canvas id="eq"></canvas></div>
 <div class="trades"><h2>Letzte Trades</h2><table><thead><tr><th>Zeit</th><th>Symbol</th><th>Einstieg</th><th>Ausstieg</th><th>PnL</th><th>Dauer</th><th>Grund</th></tr></thead><tbody id="tbody"></tbody></table></div>
 <footer>Auto-refresh alle 30s &nbsp;·&nbsp; TradingMaschiene &nbsp;·&nbsp; <span id="ts"></span></footer>
@@ -87,6 +88,17 @@ async function load(){
     {label:'Drawdown', value: d.drawdown.toFixed(2)+'%', sub:'Max erlaubt: 15%', cls: d.drawdown>10?'red':d.drawdown>5?'yellow':'green'},
     {label:'Offene Pos.', value: d.open_positions, sub:'Max: '+d.max_positions, cls:'accent'},
   ].map(m=>`<div class="card"><div class="label">${m.label}</div><div class="value ${m.cls}">${m.value}</div><div class="sub">${m.sub}</div></div>`).join('');
+
+  // Sentiment cards
+  if(d.sentiment && Object.keys(d.sentiment).length){
+    const sc = Object.entries(d.sentiment).map(([sym,s])=>{
+      const score = s.score;
+      const cls = score>0.2?'green':score<-0.2?'red':'yellow';
+      const bar = Math.round((score+1)/2*100);
+      return `<div class="card"><div class="label">Sentiment ${sym}</div><div class="value ${cls}">${s.label}</div><div style="background:#21262d;border-radius:4px;height:6px;margin-top:8px"><div style="background:${score>0.2?'var(--green)':score<-0.2?'var(--red)':'var(--yellow)'};width:${bar}%;height:100%;border-radius:4px;transition:width .5s"></div></div><div class="sub">${score>=0?'+':''}${score.toFixed(2)} · ${s.sources} Quellen</div></div>`;
+    }).join('');
+    document.getElementById('sentiment').innerHTML = sc;
+  }
 
   // Equity chart
   if(d.equity_curve && d.equity_curve.length>1){
@@ -128,10 +140,15 @@ class WebDashboard:
         self._mode = "PAPER"
         self._equity: list = []
         self._eq_labels: list = []
+        self._sentiment: dict = {}
 
     def set_portfolio(self, portfolio, mode: str = "PAPER") -> None:
         self._portfolio = portfolio
         self._mode = mode
+
+    def set_sentiment(self, sentiment: dict) -> None:
+        """Update sentiment data (symbol → sentiment dict)."""
+        self._sentiment = sentiment
 
     def record_equity(self, value: float) -> None:
         ts = datetime.now(timezone.utc).strftime("%H:%M")
@@ -176,6 +193,7 @@ class WebDashboard:
             "equity_curve":   self._equity,
             "equity_labels":  self._eq_labels,
             "trades":         trades,
+            "sentiment":      self._sentiment,
         }
 
     def _serve(self) -> None:
