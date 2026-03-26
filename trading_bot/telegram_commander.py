@@ -24,7 +24,10 @@ HILFE_TEXT = """🤖 <b>TradingMaschiene — Befehle</b>
 /pause     — Neue Käufe pausieren
 /resume    — Käufe wieder aktivieren
 /stop      — Bot stoppen
-/hilfe     — Diese Hilfe"""
+/reset     — Gesprächsverlauf löschen
+/hilfe     — Diese Hilfe
+
+💬 <b>Oder schreib einfach eine Frage</b> — KI antwortet direkt!</b>"""
 
 
 class TelegramCommander:
@@ -46,6 +49,9 @@ class TelegramCommander:
         self.on_stop: Optional[Callable] = None
         self.on_status: Optional[Callable[[], str]] = None
         self.on_portfolio: Optional[Callable[[], str]] = None
+
+        # AI-Assistent (lazy init)
+        self._assistant = None
 
         if self._enabled:
             logger.info("Telegram Commander bereit — empfange Befehle")
@@ -89,42 +95,57 @@ class TelegramCommander:
             data = json.loads(resp.read())
         return data.get("result", [])
 
+    def _get_assistant(self):
+        if self._assistant is None:
+            from .ai_assistant import AIAssistant
+            self._assistant = AIAssistant(get_status_fn=self.on_status)
+        return self._assistant
+
     def _handle(self, update: dict) -> None:
         msg = update.get("message", {})
-        chat_id = str(msg.get("chat", {}).get("id", ""))
-        text = (msg.get("text") or "").strip().lower()
+        chat_id_int = msg.get("chat", {}).get("id")
+        chat_id = str(chat_id_int or "")
+        text = (msg.get("text") or "").strip()
 
         if chat_id != self.chat_id or not text:
             return
 
-        logger.info(f"Telegram Befehl: {text}")
+        cmd = text.lower()
+        logger.info(f"Telegram Nachricht: {text[:60]}")
 
-        if text in ("/hilfe", "/help", "/start"):
+        if cmd in ("/hilfe", "/help", "/start"):
             self._send(HILFE_TEXT)
 
-        elif text == "/status":
+        elif cmd == "/status":
             reply = self.on_status() if self.on_status else "⚠️ Status nicht verfügbar."
             self._send(reply)
 
-        elif text == "/portfolio":
+        elif cmd == "/portfolio":
             reply = self.on_portfolio() if self.on_portfolio else "⚠️ Portfolio nicht verfügbar."
             self._send(reply)
 
-        elif text == "/pause":
+        elif cmd == "/pause":
             self._paused = True
             self._send("⏸ <b>Bot pausiert.</b>\nKeine neuen Käufe. Offene Positionen werden weiter überwacht.")
 
-        elif text == "/resume":
+        elif cmd == "/resume":
             self._paused = False
             self._send("▶️ <b>Bot fortgesetzt.</b>\nNeue Käufe wieder aktiv.")
 
-        elif text == "/stop":
+        elif cmd == "/stop":
             self._send("⏹ <b>Bot wird gestoppt...</b>\nOffene Positionen werden geschlossen.")
             if self.on_stop:
                 self.on_stop()
 
+        elif cmd == "/reset":
+            self._get_assistant().clear_history(chat_id_int)
+            self._send("🔄 Gesprächsverlauf gelöscht. Frischer Start!")
+
         else:
-            self._send(f"❓ Unbekannter Befehl: <code>{text}</code>\n\n/hilfe für alle Befehle.")
+            # Freie Textnachricht → AI-Assistent
+            self._send("💭 <i>Denke nach...</i>")
+            reply = self._get_assistant().chat(chat_id_int, text)
+            self._send(reply)
 
     def _send(self, text: str) -> None:
         try:
