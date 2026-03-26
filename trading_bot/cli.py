@@ -47,8 +47,24 @@ def paper(ctx, symbol, strategy, capital):
         cfg.portfolio.initial_capital = capital
 
     console.print(f"[green]Starting paper trading[/green] | Strategy: [yellow]{cfg.trading.strategy}[/yellow]")
-    trader = PaperTrader(cfg)
-    trader.run()
+
+    # Try live paper trading; fall back to offline simulation if no network
+    try:
+        trader = PaperTrader(cfg)
+        # Probe network by loading markets
+        trader.exchange.load_markets()
+        trader.run()
+    except Exception as e:
+        if "NetworkError" in type(e).__name__ or "NameResolutionError" in str(e) or "NetworkError" in str(e) or "Failed to resolve" in str(e):
+            console.print(
+                "[yellow]No exchange connection — running in OFFLINE SIMULATION mode.[/yellow]\n"
+                "[dim]When you have API keys and internet, this uses live Binance data.[/dim]\n"
+            )
+            from .offline_sim import OfflinePaperTrader
+            sim = OfflinePaperTrader(cfg, speed=0.0)
+            sim.run(print_every=200)
+        else:
+            raise
 
 
 @cli.command()
