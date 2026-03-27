@@ -108,7 +108,7 @@ def paper(ctx, symbol, strategy, capital):
                 "[dim]When you have API keys and internet, this uses live Binance data.[/dim]\n"
             )
             from .offline_sim import OfflinePaperTrader
-            sim = OfflinePaperTrader(cfg, speed=0.0)
+            sim = OfflinePaperTrader(cfg, speed=0.05)
             sim.run(print_every=200)
         else:
             raise
