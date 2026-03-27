@@ -168,7 +168,7 @@ class WebDashboard:
             return {"error": "No portfolio"}
         s = self._portfolio.summary()
         trades = []
-        for t in self._portfolio.trade_history[-50:]:
+        for t in self._portfolio.trades[-50:]:
             trades.append({
                 "symbol":      t.symbol,
                 "entry_price": t.entry_price,
@@ -183,7 +183,7 @@ class WebDashboard:
             "portfolio_value": round(s["current_value"], 2),
             "initial_capital": round(s["initial_capital"], 2),
             "total_return_pct": round(s["total_return_pct"], 2) if "total_return_pct" in s else round((s["current_value"]-s["initial_capital"])/s["initial_capital"]*100, 2),
-            "realized_pnl":   round(s.get("realized_pnl", 0), 2),
+            "realized_pnl":   round(s.get("total_realized_pnl", s.get("realized_pnl", 0)), 2),
             "daily_pnl":      round(s["daily_pnl"], 2),
             "total_trades":   s["total_trades"],
             "win_rate":       round(s["win_rate_pct"], 1),
