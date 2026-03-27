@@ -99,7 +99,10 @@ def paper(ctx, symbol, strategy, capital):
         trader.exchange.load_markets()
         trader.run()
     except Exception as e:
-        if "NetworkError" in type(e).__name__ or "NameResolutionError" in str(e) or "NetworkError" in str(e) or "Failed to resolve" in str(e):
+        if any(x in str(type(e).__name__) + str(e) for x in [
+            "NetworkError", "NameResolutionError", "Failed to resolve",
+            "ExchangeNotAvailable", "404", "RequestTimeout", "ConnectionError"
+        ]):
             console.print(
                 "[yellow]No exchange connection — running in OFFLINE SIMULATION mode.[/yellow]\n"
                 "[dim]When you have API keys and internet, this uses live Binance data.[/dim]\n"
