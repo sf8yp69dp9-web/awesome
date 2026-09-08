@@ -1,0 +1,1765 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Introki OS — Strategy Operating System</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+
+/* ═══════════════════════════════════════
+   DESIGN TOKENS — Single source of truth
+   ═══════════════════════════════════════ */
+:root {
+  /* Colors */
+  --bg:      #0C0C0C;
+  --s1:      #131313;
+  --s2:      #1A1A1A;
+  --s3:      #212121;
+  --b1:      #222222;
+  --b2:      #2C2C2C;
+  --b3:      #383838;
+  --text:    #F0F0F0;
+  --muted:   #686868;
+  --subtle:  #404040;
+  --light:   #A0A0A0;
+  --green:   #1E3D2C;
+  --green-b: #2A5A3E;
+  --green-t: #5DB882;
+
+  /* TYPOGRAPHY SCALE */
+  --fs-xs:   11px;
+  --fs-sm:   13px;
+  --fs-md:   15px;
+  --fs-lg:   20px;
+  --fs-xl:   28px;
+
+  /* Font weights */
+  --fw-normal: 400;
+  --fw-medium: 500;
+  --fw-semi:   600;
+  --fw-bold:   700;
+  --fw-black:  800;
+
+  /* Letter spacing */
+  --ls-tight:  -0.3px;
+  --ls-normal:  0px;
+  --ls-wide:    1px;
+  --ls-xwide:   2px;
+  --ls-label:   1.5px;
+
+  /* Spacing */
+  --sp-xs:  6px;
+  --sp-sm:  10px;
+  --sp-md:  16px;
+  --sp-lg:  24px;
+  --sp-xl:  32px;
+
+  /* Radius */
+  --r-sm: 5px;
+  --r-md: 8px;
+  --r-lg: 12px;
+}
+
+/* ═══════════════════════════════════════
+   RESET
+   ═══════════════════════════════════════ */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; font-size:16px; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-normal);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* ═══════════════════════════════════════
+   TOPBAR
+   ═══════════════════════════════════════ */
+.topbar {
+  background: var(--s1);
+  border-bottom: 1px solid var(--b1);
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--sp-xl);
+  position: sticky;
+  top: 0;
+  z-index: 200;
+}
+.tb-brand {
+  font-family: 'Syne', sans-serif;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-black);
+  letter-spacing: var(--ls-xwide);
+  text-transform: uppercase;
+  color: var(--text);
+}
+.tb-center { display:flex; align-items:center; gap:12px; }
+.tb-prog-wrap { width:120px; height:2px; background:var(--b2); border-radius:2px; overflow:hidden; }
+.tb-prog-fill { height:100%; background:var(--text); border-radius:2px; transition:width .4s ease; }
+.tb-prog-text {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  letter-spacing: var(--ls-wide);
+  min-width: 48px;
+  text-align: right;
+}
+.tb-date {
+  font-size: var(--fs-xs);
+  color: var(--subtle);
+  letter-spacing: var(--ls-wide);
+}
+
+/* ═══════════════════════════════════════
+   LAYOUT
+   ═══════════════════════════════════════ */
+.layout { display:flex; min-height:calc(100vh - 50px); }
+
+/* ═══════════════════════════════════════
+   SIDEBAR
+   ═══════════════════════════════════════ */
+.sidebar {
+  width: 228px;
+  flex-shrink: 0;
+  background: var(--s1);
+  border-right: 1px solid var(--b1);
+  padding: var(--sp-lg) 0;
+  position: sticky;
+  top: 50px;
+  height: calc(100vh - 50px);
+  overflow-y: auto;
+}
+.sb-section-label {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  color: var(--subtle);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  padding: 0 16px var(--sp-xs);
+}
+.sb-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+  padding: 8px 12px;
+  margin: 1px 8px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.sb-item:hover { background: var(--s2); }
+.sb-item.active { background: var(--s2); }
+.sb-num {
+  font-family: 'Syne', sans-serif;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--subtle);
+  width: 22px;
+  flex-shrink: 0;
+  letter-spacing: var(--ls-normal);
+}
+.sb-item.active .sb-num { color: var(--light); }
+.sb-name {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  color: var(--muted);
+  line-height: 1.35;
+  flex: 1;
+}
+.sb-item.active .sb-name { color: var(--text); }
+.sb-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--b3);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.sb-dot.done { background: var(--text); border-color: var(--text); }
+.sb-dot.done::after {
+  content: '';
+  width: 5px;
+  height: 3px;
+  border-left: 1.5px solid var(--bg);
+  border-bottom: 1.5px solid var(--bg);
+  transform: rotate(-45deg) translateY(-1px);
+}
+.sb-divider { height: 1px; background: var(--b1); margin: 12px 12px; }
+
+/* ═══════════════════════════════════════
+   MAIN CONTENT AREA
+   ═══════════════════════════════════════ */
+.main {
+  flex: 1;
+  padding: var(--sp-xl) var(--sp-xl);
+  max-width: 820px;
+}
+
+/* ═══════════════════════════════════════
+   SECTIONS
+   ═══════════════════════════════════════ */
+.section { display: none; animation: fadeIn 0.18s ease; }
+.section.active { display: block; }
+@keyframes fadeIn {
+  from { opacity:0; transform:translateY(5px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* Section header */
+.sh {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--sp-lg);
+  padding-bottom: var(--sp-lg);
+  border-bottom: 1px solid var(--b1);
+}
+.sh-eyebrow {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  color: var(--muted);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  margin-bottom: var(--sp-xs);
+}
+.sh-title {
+  font-family: 'Syne', sans-serif;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-black);
+  color: var(--text);
+  letter-spacing: var(--ls-tight);
+  line-height: 1.2;
+}
+.sh-desc {
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  margin-top: 6px;
+  line-height: 1.55;
+  max-width: 480px;
+}
+.sh-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: var(--sp-lg);
+}
+.sh-counter {
+  font-family: 'Syne', sans-serif;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  color: var(--muted);
+  letter-spacing: var(--ls-wide);
+}
+.sh-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+}
+.badge-todo   { background: var(--b2); color: var(--muted); }
+.badge-doing  { background: #2A2010; color: #C8960B; border: 1px solid #3A3010; }
+.badge-done   { background: var(--green); color: var(--green-t); }
+
+/* ═══════════════════════════════════════
+   TASK GROUPS
+   ═══════════════════════════════════════ */
+.tg { margin-bottom: var(--sp-lg); }
+.tg-header {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  color: var(--subtle);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  padding-bottom: var(--sp-xs);
+  margin-bottom: var(--sp-sm);
+  border-bottom: 1px solid var(--b1);
+}
+
+/* ═══════════════════════════════════════
+   TASKS
+   ═══════════════════════════════════════ */
+.task {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--s2);
+  border: 1px solid var(--b1);
+  border-radius: var(--r-sm);
+  margin-bottom: 5px;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+  user-select: none;
+}
+.task:hover { border-color: var(--b3); background: var(--s3); }
+.task.done { opacity: 0.4; }
+.task.done .task-title {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+.task-cb {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid var(--b3);
+  flex-shrink: 0;
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s;
+}
+.task.done .task-cb { background: var(--text); border-color: var(--text); }
+.task.done .task-cb::after {
+  content: '';
+  width: 6px;
+  height: 3.5px;
+  border-left: 1.5px solid var(--bg);
+  border-bottom: 1.5px solid var(--bg);
+  transform: rotate(-45deg) translateY(-1px);
+}
+.task-body { flex: 1; min-width: 0; }
+.task-title {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text);
+  line-height: 1.45;
+}
+.task-note {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+.task-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs);
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+.task-tag {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  color: var(--subtle);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  background: var(--b1);
+  padding: 2px 7px;
+  border-radius: 3px;
+}
+.task-right { flex-shrink: 0; }
+.task-day {
+  font-size: var(--fs-xs);
+  color: var(--subtle);
+  letter-spacing: var(--ls-wide);
+}
+
+/* ═══════════════════════════════════════
+   INFO BLOCKS
+   ═══════════════════════════════════════ */
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-sm);
+  margin-bottom: var(--sp-md);
+}
+.info-block {
+  background: var(--s2);
+  border: 1px solid var(--b1);
+  border-radius: var(--r-md);
+  padding: var(--sp-md);
+}
+.ib-label {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  color: var(--muted);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.ib-item {
+  font-size: var(--fs-sm);
+  color: var(--light);
+  line-height: 1.7;
+}
+.ib-item::before { content: '— '; color: var(--subtle); }
+.ib-key { font-weight: var(--fw-semi); color: var(--text); }
+
+/* ═══════════════════════════════════════
+   KPI STRIP
+   ═══════════════════════════════════════ */
+.kpi-strip {
+  display: flex;
+  gap: var(--sp-sm);
+  margin-bottom: var(--sp-lg);
+  flex-wrap: wrap;
+}
+.kpi {
+  background: var(--s2);
+  border: 1px solid var(--b1);
+  border-radius: var(--r-md);
+  padding: 12px var(--sp-md);
+  flex: 1;
+  min-width: 90px;
+}
+.kpi-val {
+  font-family: 'Syne', sans-serif;
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-black);
+  color: var(--text);
+  letter-spacing: var(--ls-tight);
+  line-height: 1.1;
+}
+.kpi-label {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  letter-spacing: var(--ls-wide);
+  margin-top: 3px;
+}
+
+/* ═══════════════════════════════════════
+   CONTENT TABLE
+   ═══════════════════════════════════════ */
+.ctable { width:100%; border-collapse:collapse; margin-bottom: var(--sp-md); }
+.ctable th {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  color: var(--muted);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--b1);
+  background: var(--s1);
+}
+.ctable th:first-child { border-radius: var(--r-sm) 0 0 0; }
+.ctable th:last-child  { border-radius: 0 var(--r-sm) 0 0; }
+.ctable td {
+  padding: 9px 12px;
+  font-size: var(--fs-sm);
+  color: var(--light);
+  border-bottom: 1px solid var(--b1);
+  vertical-align: middle;
+}
+.ctable tr:hover td { background: var(--s2); color: var(--text); }
+.ctable .day {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  color: var(--subtle);
+  letter-spacing: var(--ls-wide);
+  white-space: nowrap;
+}
+.ctable .platform {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semi);
+  color: var(--text);
+}
+.goal-tag {
+  display: inline-block;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--ls-wide);
+  background: var(--b1);
+  padding: 2px 8px;
+  border-radius: 3px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+/* ═══════════════════════════════════════
+   POST BOX
+   ═══════════════════════════════════════ */
+.post-box {
+  background: var(--s2);
+  border: 1px solid var(--b1);
+  border-radius: var(--r-md);
+  margin-bottom: var(--sp-md);
+  overflow: hidden;
+}
+.pb-header {
+  padding: 12px var(--sp-md);
+  border-bottom: 1px solid var(--b1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pb-title {
+  font-family: 'Syne', sans-serif;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--text);
+  letter-spacing: var(--ls-normal);
+}
+.pb-tag {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  color: var(--muted);
+  background: var(--b2);
+  padding: 3px 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.pb-body {
+  padding: var(--sp-md);
+  font-size: var(--fs-sm);
+  color: var(--light);
+  line-height: 1.75;
+  white-space: pre-line;
+}
+.pb-actions { display:flex; gap:8px; align-items:center; }
+.pb-hashtags {
+  padding: 0 var(--sp-md) var(--sp-md);
+  font-size: var(--fs-xs);
+  color: var(--subtle);
+  letter-spacing: var(--ls-wide);
+}
+.copy-btn {
+  background: var(--b2);
+  border: 1px solid var(--b3);
+  color: var(--muted);
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  cursor: pointer;
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  transition: all 0.12s;
+  font-family: 'DM Sans', sans-serif;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.copy-btn:hover  { background: var(--b3); color: var(--text); }
+.copy-btn.copied { background: var(--green); color: var(--green-t); border-color: var(--green-b); }
+
+/* ═══════════════════════════════════════
+   FUNNEL
+   ═══════════════════════════════════════ */
+.funnel-row {
+  display: flex;
+  gap: var(--sp-sm);
+  margin-bottom: var(--sp-sm);
+}
+.funnel-block {
+  flex: 1;
+  background: var(--s2);
+  border: 1px solid var(--b1);
+  border-radius: var(--r-md);
+  padding: 14px;
+}
+.fb-label {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  color: var(--muted);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+.fb-title {
+  font-family: 'Syne', sans-serif;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--text);
+  margin-bottom: 5px;
+}
+.fb-desc {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  line-height: 1.55;
+}
+.fb-channel {
+  font-size: var(--fs-xs);
+  color: var(--subtle);
+  margin-top: 6px;
+  letter-spacing: var(--ls-wide);
+}
+
+/* ═══════════════════════════════════════
+   PRICING
+   ═══════════════════════════════════════ */
+.pricing-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--sp-sm);
+  margin-bottom: var(--sp-md);
+}
+.plan {
+  background: var(--s2);
+  border: 1px solid var(--b1);
+  border-radius: var(--r-md);
+  padding: var(--sp-md);
+}
+.plan-name {
+  font-family: 'Syne', sans-serif;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--ls-wide);
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.plan-price {
+  font-family: 'Syne', sans-serif;
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-black);
+  color: var(--text);
+  letter-spacing: var(--ls-tight);
+  margin-bottom: 6px;
+  line-height: 1.1;
+}
+.plan-desc {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+/* ═══════════════════════════════════════
+   MILESTONES
+   ═══════════════════════════════════════ */
+.milestone-row {
+  display: flex;
+  gap: var(--sp-sm);
+  margin-bottom: var(--sp-md);
+}
+.ms {
+  flex: 1;
+  background: var(--s2);
+  border: 1px solid var(--b1);
+  border-radius: var(--r-md);
+  padding: var(--sp-md);
+}
+.ms-period {
+  font-family: 'Syne', sans-serif;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--light);
+  letter-spacing: var(--ls-wide);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+.ms-item {
+  font-size: var(--fs-xs);
+  color: var(--muted);
+  line-height: 1.75;
+}
+.ms-item::before { content: '→ '; color: var(--subtle); }
+
+/* ═══════════════════════════════════════
+   DASHBOARD
+   ═══════════════════════════════════════ */
+.dashboard {
+  background: var(--s1);
+  border: 1px solid var(--b1);
+  border-radius: var(--r-lg);
+  padding: var(--sp-lg);
+  margin-bottom: var(--sp-lg);
+}
+.db-title {
+  font-family: 'Syne', sans-serif;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--muted);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  margin-bottom: var(--sp-md);
+}
+.db-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-sm);
+}
+.db-card {
+  background: var(--bg);
+  border: 1px solid var(--b1);
+  border-radius: var(--r-md);
+  padding: var(--sp-md);
+}
+.db-card-label {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  color: var(--muted);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.db-card-val {
+  font-family: 'Syne', sans-serif;
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-black);
+  color: var(--text);
+  letter-spacing: var(--ls-tight);
+  line-height: 1.1;
+}
+.db-card-sub {
+  font-size: var(--fs-xs);
+  color: var(--subtle);
+  margin-top: 4px;
+}
+
+/* ═══════════════════════════════════════
+   TABS
+   ═══════════════════════════════════════ */
+.tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--b1);
+  margin-bottom: var(--sp-md);
+}
+.tab {
+  padding: 8px 16px;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.12s;
+  letter-spacing: var(--ls-normal);
+}
+.tab:hover { color: var(--light); }
+.tab.active { color: var(--text); border-bottom-color: var(--text); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ═══════════════════════════════════════
+   COMPLETE BUTTON
+   ═══════════════════════════════════════ */
+.complete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: var(--sp-lg);
+  padding: 10px var(--sp-md);
+  background: var(--s2);
+  border: 1px solid var(--b2);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--muted);
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: all 0.12s;
+}
+.complete-btn:hover { background: var(--s3); color: var(--text); border-color: var(--b3); }
+.complete-btn.done {
+  background: var(--green);
+  border-color: var(--green-b);
+  color: var(--green-t);
+}
+
+/* ═══════════════════════════════════════
+   SCROLLBAR
+   ═══════════════════════════════════════ */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--b3); border-radius: 2px; }
+
+/* ═══════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════ */
+@media (max-width: 900px) {
+  .sidebar { width: 190px; }
+  .main { padding: 24px; }
+}
+@media (max-width: 680px) {
+  .layout { flex-direction: column; }
+  .sidebar { width:100%; height:auto; position:static; border-right:none; border-bottom:1px solid var(--b1); padding:12px 0; overflow-x:auto; overflow-y:hidden; display:flex; flex-direction:row; }
+  .sb-section-label { display: none; }
+  .sb-divider { display: none; }
+  .sb-item { display:inline-flex; flex-direction:column; width:auto; padding:8px 10px; }
+  .sb-dot { display: none; }
+  .sb-name { font-size: 10px; }
+  .main { padding: 16px; }
+  .info-grid { grid-template-columns: 1fr; }
+  .pricing-row { grid-template-columns: 1fr 1fr; }
+  .funnel-row { flex-direction: column; }
+  .milestone-row { flex-direction: column; }
+  .kpi-strip { gap: 6px; }
+  .kpi { min-width: 70px; padding: 8px 10px; }
+  .kpi-val { font-size: 20px; }
+  .sh { flex-direction: column; gap: 8px; }
+  .sh-right { align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="tb-brand">Introki OS</span>
+  <div class="tb-center">
+    <div class="tb-prog-wrap"><div class="tb-prog-fill" id="globalProg" style="width:0%"></div></div>
+    <span class="tb-prog-text" id="globalProgText">0 / 0</span>
+  </div>
+  <span class="tb-date">September 2026 · Jeremy Grabinski</span>
+</div>
+
+<div class="layout">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sb-section-label">Strategie-Bereiche</div>
+
+  <div class="sb-item active" onclick="showSection('s0',this)">
+    <span class="sb-num">00</span>
+    <span class="sb-name">Dashboard</span>
+    <div class="sb-dot" id="dot-s0"></div>
+  </div>
+
+  <div class="sb-divider"></div>
+  <div class="sb-section-label">7 Module</div>
+
+  <div class="sb-item" onclick="showSection('s1',this)">
+    <span class="sb-num">01</span>
+    <span class="sb-name">Social Media Strategy</span>
+    <div class="sb-dot" id="dot-s1"></div>
+  </div>
+  <div class="sb-item" onclick="showSection('s2',this)">
+    <span class="sb-num">02</span>
+    <span class="sb-name">Audience Psychology</span>
+    <div class="sb-dot" id="dot-s2"></div>
+  </div>
+  <div class="sb-item" onclick="showSection('s3',this)">
+    <span class="sb-num">03</span>
+    <span class="sb-name">Authority Positioning</span>
+    <div class="sb-dot" id="dot-s3"></div>
+  </div>
+  <div class="sb-item" onclick="showSection('s4',this)">
+    <span class="sb-num">04</span>
+    <span class="sb-name">Content Pillars</span>
+    <div class="sb-dot" id="dot-s4"></div>
+  </div>
+  <div class="sb-item" onclick="showSection('s5',this)">
+    <span class="sb-num">05</span>
+    <span class="sb-name">30-Day Content Plan</span>
+    <div class="sb-dot" id="dot-s5"></div>
+  </div>
+  <div class="sb-item" onclick="showSection('s6',this)">
+    <span class="sb-num">06</span>
+    <span class="sb-name">Posts That Convert</span>
+    <div class="sb-dot" id="dot-s6"></div>
+  </div>
+  <div class="sb-item" onclick="showSection('s7',this)">
+    <span class="sb-num">07</span>
+    <span class="sb-name">Monetization</span>
+    <div class="sb-dot" id="dot-s7"></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+<!-- ══ DASHBOARD ══ -->
+<div class="section active" id="s0">
+  <div class="sh">
+    <div class="sh-left">
+      <div class="sh-eyebrow">Introki · Strategie OS · 2026</div>
+      <div class="sh-title">Mission Control</div>
+      <div class="sh-desc">Gesamtfortschritt aller 7 Strategie-Module auf einen Blick.</div>
+    </div>
+  </div>
+
+  <div class="dashboard">
+    <div class="db-title">Gesamtstatus</div>
+    <div class="db-grid">
+      <div class="db-card">
+        <div class="db-card-label">Abgeschlossen</div>
+        <div class="db-card-val" id="db-done">0</div>
+        <div class="db-card-sub">von <span id="db-total">0</span> Aufgaben</div>
+      </div>
+      <div class="db-card">
+        <div class="db-card-label">Module aktiv</div>
+        <div class="db-card-val" id="db-modules">0/7</div>
+        <div class="db-card-sub">gestartet</div>
+      </div>
+      <div class="db-card">
+        <div class="db-card-label">Fortschritt</div>
+        <div class="db-card-val" id="db-pct">0%</div>
+        <div class="db-card-sub">Gesamtstrategie</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="kpi-strip">
+    <div class="kpi"><div class="kpi-val">90</div><div class="kpi-label">Tage Roadmap</div></div>
+    <div class="kpi"><div class="kpi-val">7</div><div class="kpi-label">Module</div></div>
+    <div class="kpi"><div class="kpi-val">€49</div><div class="kpi-label">Growth Plan Start</div></div>
+    <div class="kpi"><div class="kpi-val">5.2B</div><div class="kpi-label">USD CRM-Markt DE</div></div>
+    <div class="kpi"><div class="kpi-val">68%</div><div class="kpi-label">KMU ohne CRM</div></div>
+  </div>
+
+  <div class="tg">
+    <div class="tg-header">Quick Wins — Sofort umsetzbar (heute)</div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">LinkedIn Headline aendern: "Sales &amp; Marketing @ Introki | KI-CRM fuer den Mittelstand | DSGVO-konform"</div>
+        <div class="task-note">Aktuell: "Medienverwalter" — verliert algorithmische Reichweite. 5 Minuten Aufwand.</div>
+        <div class="task-meta"><span class="task-tag">LinkedIn</span><span class="task-tag">5 Min</span></div>
+      </div>
+      <div class="task-right"><span class="task-day">Heute</span></div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">LinkedIn About-Sektion befuellen (fertiger Text im Modul 03)</div>
+        <div class="task-note">Profile mit About-Sektion bekommen 3.9x mehr Aufrufe. 10 Minuten kopieren.</div>
+        <div class="task-meta"><span class="task-tag">LinkedIn</span><span class="task-tag">10 Min</span></div>
+      </div>
+      <div class="task-right"><span class="task-day">Heute</span></div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Instagram Bio ersetzen: "Der einzige Arbeitsplatz, den dein Vertrieb braucht. DSGVO-konform."</div>
+        <div class="task-note">Aktuelle Bio ist grammatikalisch unklar und kommuniziert keinen USP.</div>
+        <div class="task-meta"><span class="task-tag">Instagram</span><span class="task-tag">5 Min</span></div>
+      </div>
+      <div class="task-right"><span class="task-day">Heute</span></div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Ersten LinkedIn Post aus Modul 06 (Post A) vorbereiten und terminieren</div>
+        <div class="task-note">Copy-Paste ready. Posten Di oder Do 15:00-19:00 Uhr fuer maximale Reichweite.</div>
+        <div class="task-meta"><span class="task-tag">Content</span><span class="task-tag">15 Min</span></div>
+      </div>
+      <div class="task-right"><span class="task-day">Heute</span></div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">20 Verbindungsanfragen auf LinkedIn senden (ICP: GF / Head of Sales, KMU DACH)</div>
+        <div class="task-note">Keine Nachricht bei Anfrage = hoehere Annahmequote. Ziel: 500 Kontakte in 8 Wochen.</div>
+        <div class="task-meta"><span class="task-tag">Netzwerk</span><span class="task-tag">20 Min</span></div>
+      </div>
+      <div class="task-right"><span class="task-day">Heute</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 01 SOCIAL MEDIA STRATEGY ══ -->
+<div class="section" id="s1">
+  <div class="sh">
+    <div class="sh-left">
+      <div class="sh-eyebrow">01 / 07 · Marktpositionierung</div>
+      <div class="sh-title">Full Social Media Strategy</div>
+      <div class="sh-desc">Brand Positioning, Content Direction, Wachstumsziele und Kanalstrategie.</div>
+    </div>
+    <div class="sh-right">
+      <span class="sh-counter" id="counter-s1">0/0</span>
+      <span class="sh-badge badge-todo" id="badge-s1">Todo</span>
+    </div>
+  </div>
+
+  <div class="kpi-strip">
+    <div class="kpi"><div class="kpi-val">5.2B$</div><div class="kpi-label">CRM-Markt DE 2025</div></div>
+    <div class="kpi"><div class="kpi-val">11.6%</div><div class="kpi-label">CAGR Wachstum</div></div>
+    <div class="kpi"><div class="kpi-val">68%</div><div class="kpi-label">KMU ohne CRM</div></div>
+    <div class="kpi"><div class="kpi-val">€49</div><div class="kpi-label">Growth Entry</div></div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-block">
+      <div class="ib-label">Brand Positioning</div>
+      <div class="ib-item"><span class="ib-key">Kategorie:</span> Tool-Stack-Replacement</div>
+      <div class="ib-item"><span class="ib-key">Kern-USP:</span> Smart Routing + KI + Workflow</div>
+      <div class="ib-item"><span class="ib-key">Differenz:</span> DSGVO-nativ, Made in Germany</div>
+      <div class="ib-item"><span class="ib-key">Preis:</span> Ersetzt 4-5 Tools ab €49/Monat</div>
+    </div>
+    <div class="info-block">
+      <div class="ib-label">Wachstumsziele 2026</div>
+      <div class="ib-item">Dominik: 2.000 Follower in 90 Tagen</div>
+      <div class="ib-item">Jeremy: 500 Kontakte in 8 Wochen</div>
+      <div class="ib-item">Instagram: 500 Follower in 60 Tagen</div>
+      <div class="ib-item">100 aktive User in 8 Wochen</div>
+    </div>
+  </div>
+
+  <div class="tg">
+    <div class="tg-header">Brand Setup — Einmalige Aufgaben</div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Positioning Statement final definieren und intern kommunizieren</div>
+        <div class="task-note">"Introki ist das einzige Vertriebs-Betriebssystem fuer den deutschen Mittelstand — DSGVO-nativ, KI-gestuetzt, sofort einsatzbereit."</div>
+        <div class="task-meta"><span class="task-tag">Brand</span></div>
+      </div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Brand Guidelines fuer alle Kanaele finalisieren (Farben #1A1A2E / #E94560, Font: DM Sans)</div>
+        <div class="task-meta"><span class="task-tag">Design</span></div>
+      </div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Vergleichsseite /vs-hubspot auf Website erstellen (SEO: "HubSpot Alternative deutsch")</div>
+        <div class="task-note">SEO-Gold. Suchvolumen "HubSpot Alternative" sehr hoch im DACH-Raum.</div>
+        <div class="task-meta"><span class="task-tag">SEO</span><span class="task-tag">Website</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tg">
+    <div class="tg-header">Kanalstrategie — Woechentliche Routine</div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">LinkedIn: 3x/Woche posten (Mo/Mi/Fr) — Dominik Voice: Problem-Posts, Kontra-Takes</div>
+        <div class="task-meta"><span class="task-tag">LinkedIn</span><span class="task-tag">Woechentlich</span></div>
+      </div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Instagram: 4x/Woche — Reels (Di/Do/Sa) + 1 Carousel — Visual-first, kein Text-heavy</div>
+        <div class="task-meta"><span class="task-tag">Instagram</span><span class="task-tag">Woechentlich</span></div>
+      </div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">YouTube: 1 Video/Woche — "HubSpot Alternative deutsch", "CRM fuer kleine Teams" als erste Videos</div>
+        <div class="task-meta"><span class="task-tag">YouTube</span><span class="task-tag">Woechentlich</span></div>
+      </div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Newsletter: 1x/Woche — Mittelstand-spezifische Insights, kein Pitch, echter Mehrwert</div>
+        <div class="task-meta"><span class="task-tag">Newsletter</span><span class="task-tag">Woechentlich</span></div>
+      </div>
+    </div>
+  </div>
+  <button class="complete-btn" id="completeBtn-s1" onclick="completeSection('s1')">✓ Modul als abgeschlossen markieren</button>
+</div>
+
+<!-- ══ 02 AUDIENCE PSYCHOLOGY ══ -->
+<div class="section" id="s2">
+  <div class="sh">
+    <div class="sh-left">
+      <div class="sh-eyebrow">02 / 07 · Zielgruppenpsychologie</div>
+      <div class="sh-title">Audience Psychology Breakdown</div>
+      <div class="sh-desc">Psychografik der Zielgruppe — Schmerzen, Wuensche, Trigger, Messaging Angles.</div>
+    </div>
+    <div class="sh-right">
+      <span class="sh-counter" id="counter-s2">0/0</span>
+      <span class="sh-badge badge-todo" id="badge-s2">Todo</span>
+    </div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-block">
+      <div class="ib-label">Groesste Frustrationen</div>
+      <div class="ib-item">CRM wird vom Team nicht genutzt</div>
+      <div class="ib-item">Setter-Closer-Uebergabe scheitert</div>
+      <div class="ib-item">Tool-Chaos: 5+ Abos pro Monat</div>
+      <div class="ib-item">Keine Pipeline-Transparenz</div>
+      <div class="ib-item">HubSpot zu teuer, zu komplex</div>
+      <div class="ib-item">DSGVO-Sorgen mit US-Software</div>
+    </div>
+    <div class="info-block">
+      <div class="ib-label">Groesste Wuensche</div>
+      <div class="ib-item">Ein System statt fuenf Tools</div>
+      <div class="ib-item">Prozess laeuft ohne mich</div>
+      <div class="ib-item">Team nutzt das System wirklich</div>
+      <div class="ib-item">Transparenz in Echtzeit</div>
+      <div class="ib-item">Guenstiger als HubSpot</div>
+      <div class="ib-item">Deutsche Daten, keine Sorgen</div>
+    </div>
+  </div>
+
+  <div class="tg">
+    <div class="tg-header">Psychografische Analyse</div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Kern-Angst identifiziert und in alle Posts integriert: "Deals verlieren weil das System versagt"</div>
+        <div class="task-note">Nicht das Team ist das Problem — das System ist es. Das ist der emotionale Kern jedes Posts.</div>
+        <div class="task-meta"><span class="task-tag">Messaging</span></div>
+      </div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Daily Pain Cycle in Content einbauen: Morgen ("Wo stehen meine Deals?") + Abend ("Warum ist Lead kalt?")</div>
+        <div class="task-meta"><span class="task-tag">Content-Angle</span></div>
+      </div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Trigger-Momente als Content-Timing nutzen: Naechste Tool-Rechnung / naechster verlorener Deal</div>
+        <div class="task-note">Outreach-Timing: Wenn Prospects ueber Tool-Frustration posten = idealer Kontaktpunkt</div>
+        <div class="task-meta"><span class="task-tag">Timing</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tg">
+    <div class="tg-header">Messaging Angles — Alle 5 einsetzen</div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Schmerz-Angle: "Dein Setter legt den Termin. Dein Closer weiss es nicht." — eingesetzt</div>
+        <div class="task-meta"><span class="task-tag">Angle 1</span><span class="task-tag">Hoch-Prio</span></div>
+      </div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Tool-Chaos-Angle: "5 Tools. 3 Tabs. 1 verlorener Deal." — eingesetzt</div>
+        <div class="task-meta"><span class="task-tag">Angle 2</span></div>
+      </div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Kontra-Angle: "HubSpot ist nicht fuer dich gebaut." — eingesetzt</div>
+        <div class="task-meta"><span class="task-tag">Angle 3</span></div>
+      </div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Trust-Angle: "DSGVO-konform, Made in Germany. Kein Restrisiko." — eingesetzt</div>
+        <div class="task-meta"><span class="task-tag">Angle 4</span></div>
+      </div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Speed-Angle: "In Stunden live, nicht Monaten." — eingesetzt</div>
+        <div class="task-meta"><span class="task-tag">Angle 5</span></div>
+      </div>
+    </div>
+  </div>
+  <button class="complete-btn" id="completeBtn-s2" onclick="completeSection('s2')">✓ Modul als abgeschlossen markieren</button>
+</div>
+
+<!-- ══ 03 AUTHORITY POSITIONING ══ -->
+<div class="section" id="s3">
+  <div class="sh">
+    <div class="sh-left">
+      <div class="sh-eyebrow">03 / 07 · Personal Brand</div>
+      <div class="sh-title">Authority Positioning Plan</div>
+      <div class="sh-desc">Dual-Brand Strategie, Profile-Optimierung, 90-Tage Authority Roadmap.</div>
+    </div>
+    <div class="sh-right">
+      <span class="sh-counter" id="counter-s3">0/0</span>
+      <span class="sh-badge badge-todo" id="badge-s3">Todo</span>
+    </div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-block">
+      <div class="ib-label">Dominik Scherwinsky</div>
+      <div class="ib-item">Archetyp: Stoischer Architekt</div>
+      <div class="ib-item">Ton: Brutal ehrlich, kurze Saetze</div>
+      <div class="ib-item">Themen: System vs. Chaos</div>
+      <div class="ib-item">Posting: Mo/Do/Sa · 15-22 Uhr</div>
+    </div>
+    <div class="info-block">
+      <div class="ib-label">Jeremy Grabinski</div>
+      <div class="ib-item">Archetyp: Der Praktiker</div>
+      <div class="ib-item">Ton: Strategisch, analytisch, direkt</div>
+      <div class="ib-item">Themen: Marketing, Daten, Growth</div>
+      <div class="ib-item">Posting: Di/Fr · 15-19 Uhr</div>
+    </div>
+  </div>
+
+  <div class="tg">
+    <div class="tg-header">LinkedIn Profil — Jeremy Grabinski</div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Headline aendern zu: "Sales &amp; Marketing @ Introki | KI-CRM fuer den Mittelstand | DSGVO-konform 🇩🇪"</div>
+        <div class="task-note">Aktuell "Medienverwalter" — kostet algorithmische Reichweite. Sofort aendern.</div>
+        <div class="task-meta"><span class="task-tag">Sofort</span><span class="task-tag">5 Min</span></div>
+      </div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">About-Sektion befuellen (fertiger Text aus Strategie-Dokument einfuegen)</div>
+        <div class="task-note">Hook: "Viele KMUs sammeln fleißig Visitenkarten... und verlieren dann 60% davon." 3.9x mehr Aufrufe.</div>
+        <div class="task-meta"><span class="task-tag">Sofort</span><span class="task-tag">10 Min</span></div>
+      </div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Banner erstellen (1584x396px): "KI-CRM fuer den Mittelstand · introki.app" auf #1A1A2E</div>
+        <div class="task-meta"><span class="task-tag">Design</span><span class="task-tag">Canva</span></div>
+      </div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Featured Section befuellen: Lead-Magnet PDF + Demo-Video + Calendly-Link</div>
+        <div class="task-meta"><span class="task-tag">Featured</span></div>
+      </div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Jobtitel bei "Erfahrung" auf "Marketing &amp; Sales Manager @ Introki" aendern</div>
+        <div class="task-meta"><span class="task-tag">Profil</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tg">
+    <div class="tg-header">90-Tage Authority Roadmap</div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Tage 1-30: Profil-Optimierung + 10 Posts + 250 Verbindungen + Featured Section</div>
+        <div class="task-meta"><span class="task-tag">Phase 1</span></div>
+      </div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Tage 31-60: Erste virale Reichweite + 500 Verbindungen + erste Demo-Anfragen</div>
+        <div class="task-meta"><span class="task-tag">Phase 2</span></div>
+      </div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Tage 61-90: Thought-Leader-Status DACH-SaaS + 1.000 Verbindungen + 5 Demos/Woche</div>
+        <div class="task-meta"><span class="task-tag">Phase 3</span></div>
+      </div>
+    </div>
+  </div>
+  <button class="complete-btn" id="completeBtn-s3" onclick="completeSection('s3')">✓ Modul als abgeschlossen markieren</button>
+</div>
+
+<!-- ══ 04 CONTENT PILLARS ══ -->
+<div class="section" id="s4">
+  <div class="sh">
+    <div class="sh-left">
+      <div class="sh-eyebrow">04 / 07 · Content Strategie</div>
+      <div class="sh-title">Content Pillars That Convert</div>
+      <div class="sh-desc">5 Content-Saeulen mit Themen, Zielen und Conversion-Logik.</div>
+    </div>
+    <div class="sh-right">
+      <span class="sh-counter" id="counter-s4">0/0</span>
+      <span class="sh-badge badge-todo" id="badge-s4">Todo</span>
+    </div>
+  </div>
+
+  <div class="tg">
+    <div class="tg-header">Saule 01 — Schmerz-Posts (Reichweite + Trust)</div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Post erstellen: "Setter macht Termin — Closer weiss es nicht"</div>
+        <div class="task-note">Hohe Kommentarrate. Zielgruppe erkennt sich sofort. Algorithmus-Push durch Binary CTA.</div>
+        <div class="task-meta"><span class="task-tag">Saule 1</span><span class="task-tag">LinkedIn</span></div>
+      </div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Post erstellen: "5 Tools fuer einen einzigen Vertriebsprozess"</div>
+        <div class="task-meta"><span class="task-tag">Saule 1</span><span class="task-tag">LinkedIn</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tg">
+    <div class="tg-header">Saule 02 — Kontra-Takes (Reichweite + Autoritaet)</div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Post erstellen: "HubSpot ist nicht fuer dich gebaut" (polarisierend, Third-Person)</div>
+        <div class="task-meta"><span class="task-tag">Saule 2</span><span class="task-tag">LinkedIn</span></div>
+      </div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Post erstellen: "Excel luegt — und alle wissen es"</div>
+        <div class="task-meta"><span class="task-tag">Saule 2</span><span class="task-tag">LinkedIn</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tg">
+    <div class="tg-header">Saule 03 — Demo-Content (Conversions + Demos)</div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Reel aufnehmen: "Smart Routing in 10 Sekunden" — Screen-Recording mit VO</div>
+        <div class="task-meta"><span class="task-tag">Saule 3</span><span class="task-tag">Instagram/LinkedIn</span></div>
+      </div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Reel aufnehmen: "KI-Agent recherchiert Firma in 15 Sekunden"</div>
+        <div class="task-meta"><span class="task-tag">Saule 3</span><span class="task-tag">Instagram</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tg">
+    <div class="tg-header">Saule 04 — Markt-Insights (Trust + SEO)</div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Post erstellen: "68% der deutschen KMUs haben kein funktionierendes CRM"</div>
+        <div class="task-meta"><span class="task-tag">Saule 4</span><span class="task-tag">LinkedIn</span></div>
+      </div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Post erstellen: "DSGVO und US-Cloud: Was Entscheider 2026 wissen muessen"</div>
+        <div class="task-meta"><span class="task-tag">Saule 4</span><span class="task-tag">LinkedIn</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tg">
+    <div class="tg-header">Saule 05 — Building in Public (Community + Brand)</div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Post erstellen: "Warum wir Introki bauen" — authentische Founder-Story</div>
+        <div class="task-meta"><span class="task-tag">Saule 5</span><span class="task-tag">LinkedIn</span></div>
+      </div>
+    </div>
+    <div class="task" onclick="toggleTask(this)">
+      <div class="task-cb"></div>
+      <div class="task-body">
+        <div class="task-title">Woechentliches Update: "Was wir diese Woche gelernt haben" — jeden Freitag</div>
+        <div class="task-meta"><span class="task-tag">Saule 5</span><span class="task-tag">Woechentlich</span></div>
+      </div>
+    </div>
+  </div>
+  <button class="complete-btn" id="completeBtn-s4" onclick="completeSection('s4')">✓ Modul als abgeschlossen markieren</button>
+</div>
+
+<!-- ══ 05 30-DAY PLAN ══ -->
+<div class="section" id="s5">
+  <div class="sh">
+    <div class="sh-left">
+      <div class="sh-eyebrow">05 / 07 · Redaktionsplan</div>
+      <div class="sh-title">30-Day Content Plan</div>
+      <div class="sh-desc">Tagesgenauer Plan fuer LinkedIn und Instagram. 4 Wochen, 24 Posts.</div>
+    </div>
+    <div class="sh-right">
+      <span class="sh-counter" id="counter-s5">0/0</span>
+      <span class="sh-badge badge-todo" id="badge-s5">Todo</span>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('week1',this)">Woche 1</div>
+    <div class="tab" onclick="switchTab('week2',this)">Woche 2</div>
+    <div class="tab" onclick="switchTab('week3',this)">Woche 3</div>
+    <div class="tab" onclick="switchTab('week4',this)">Woche 4</div>
+  </div>
+
+  <div class="tab-content active" id="week1">
+    <table class="ctable">
+      <tr><th>Tag</th><th>Kanal</th><th>Format</th><th>Thema</th><th>Ziel</th></tr>
+      <tr><td class="day">Mo</td><td class="platform">LinkedIn</td><td>Problem-Post</td><td>"Dein CRM kostet dich mehr Deals als es bringt"</td><td><span class="goal-tag">Reichweite</span></td></tr>
+      <tr><td class="day">Di</td><td class="platform">Instagram</td><td>Reel</td><td>Smart Routing in 10 Sekunden · Screen-Recording</td><td><span class="goal-tag">Demo</span></td></tr>
+      <tr><td class="day">Mi</td><td class="platform">LinkedIn</td><td>Building in Public</td><td>"Warum wir Introki bauen"</td><td><span class="goal-tag">Trust</span></td></tr>
+      <tr><td class="day">Do</td><td class="platform">Instagram</td><td>Carousel</td><td>Setter-Closer Problem visuell · 4 Slides</td><td><span class="goal-tag">Speichern</span></td></tr>
+      <tr><td class="day">Fr</td><td class="platform">LinkedIn</td><td>Kontroverse</td><td>"HubSpot ist nicht fuer dich gebaut"</td><td><span class="goal-tag">Kommentare</span></td></tr>
+      <tr><td class="day">Sa</td><td class="platform">Instagram</td><td>Reel</td><td>Tool-Kosten-Rechner Animation</td><td><span class="goal-tag">Reichweite</span></td></tr>
+    </table>
+    <div class="tg">
+      <div class="tg-header">Woche 1 Aufgaben</div>
+      <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">Mo: LinkedIn Problem-Post schreiben und schedulen (15:00-19:00 Uhr)</div><div class="task-meta"><span class="task-tag">Woche 1</span></div></div></div>
+      <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">Di: Instagram Reel aufnehmen — Smart Routing Demo 10 Sek, Untertitel in CapCut</div><div class="task-meta"><span class="task-tag">Woche 1</span></div></div></div>
+      <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">Mi: Building-in-Public Post schreiben — authentisch, Founder-Perspektive, kein Pitch</div><div class="task-meta"><span class="task-tag">Woche 1</span></div></div></div>
+      <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">Do: Instagram Carousel 4 Slides in Canva — Setter-Closer Problem, BW Design</div><div class="task-meta"><span class="task-tag">Woche 1</span></div></div></div>
+      <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">Fr: HubSpot-Kontra-Post live — Binary CTA "A oder B" fuer Kommentare</div><div class="task-meta"><span class="task-tag">Woche 1</span></div></div></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="week2">
+    <table class="ctable">
+      <tr><th>Tag</th><th>Kanal</th><th>Format</th><th>Thema</th><th>Ziel</th></tr>
+      <tr><td class="day">Mo</td><td class="platform">LinkedIn</td><td>Markt-Insight</td><td>"68% der KMUs haben kein funktionierendes CRM"</td><td><span class="goal-tag">Autoritaet</span></td></tr>
+      <tr><td class="day">Di</td><td class="platform">Instagram</td><td>Reel</td><td>KI-Agent Demo: Firma recherchieren in 15s</td><td><span class="goal-tag">Conversions</span></td></tr>
+      <tr><td class="day">Mi</td><td class="platform">LinkedIn</td><td>Stack-Rechner</td><td>"Was dein 5er-Team pro Monat fuer Tools zahlt"</td><td><span class="goal-tag">Reichweite</span></td></tr>
+      <tr><td class="day">Do</td><td class="platform">Instagram</td><td>Carousel</td><td>"5 Gruende warum CRM scheitert" · BW Design</td><td><span class="goal-tag">Trust</span></td></tr>
+      <tr><td class="day">Fr</td><td class="platform">LinkedIn</td><td>Umfrage</td><td>"Wie laeufst du aktuell deine Uebergaben?"</td><td><span class="goal-tag">Engagement</span></td></tr>
+      <tr><td class="day">Sa</td><td class="platform">Instagram</td><td>Reel</td><td>Workflow-Builder vs. Zapier · Side-by-Side</td><td><span class="goal-tag">Demo</span></td></tr>
+    </table>
+    <div class="tg">
+      <div class="tg-header">Woche 2 Aufgaben</div>
+      <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">Mo: Markt-Insight Post mit Statistik-Hook "68%" — Quellenangabe Statista DE</div><div class="task-meta"><span class="task-tag">Woche 2</span></div></div></div>
+      <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">Di: KI-Agent Demo Reel aufnehmen — Typewriter-Effekt im Screen, CapCut Untertitel</div><div class="task-meta"><span class="task-tag">Woche 2</span></div></div></div>
+      <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">Mi: Stack-Rechner Carousel in Canva — Pipedrive €250 + Zapier €150 + Calendly €60 = €560</div><div class="task-meta"><span class="task-tag">Woche 2</span></div></div></div>
+      <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">Fr: LinkedIn Umfrage mit 3 Optionen starten — niedrigschwellig, kein Eingestaendnis noetig</div><div class="task-meta"><span class="task-tag">Woche 2</span></div></div></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="week3">
+    <table class="ctable">
+      <tr><th>Tag</th><th>Kanal</th><th>Format</th><th>Thema</th><th>Ziel</th></tr>
+      <tr><td class="day">Mo</td><td class="platform">LinkedIn</td><td>Schmerz-Post</td><td>"4 Stunden taeglicher Vertrieb-Admin. Das ist kein Einzelfall."</td><td><span class="goal-tag">Reichweite</span></td></tr>
+      <tr><td class="day">Di</td><td class="platform">Instagram</td><td>Story-Serie</td><td>Behind the Scenes: Wie Introki gebaut wird</td><td><span class="goal-tag">Brand</span></td></tr>
+      <tr><td class="day">Mi</td><td class="platform">LinkedIn</td><td>DSGVO-Post</td><td>"Warum DSGVO mehr als Compliance ist"</td><td><span class="goal-tag">Autoritaet</span></td></tr>
+      <tr><td class="day">Do</td><td class="platform">Instagram</td><td>Carousel</td><td>Vorher/Nachher: Mit und ohne Introki</td><td><span class="goal-tag">Conversions</span></td></tr>
+      <tr><td class="day">Fr</td><td class="platform">LinkedIn</td><td>User-Feedback</td><td>Erstes Testimonial · Zitat + Kontext</td><td><span class="goal-tag">Social Proof</span></td></tr>
+      <tr><td class="day">Sa</td><td class="platform">Instagram</td><td>Reel</td><td>Morgenkompass Feature: Top-Tasks automatisch</td><td><span class="goal-tag">Demo</span></td></tr>
+    </table>
+    <div class="tg">
+      <div class="tg-header">Woche 3 Aufgaben</div>
+      <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">Mo: "4 Stunden Admin" Post — spezifische Zahl schlaegt vage Aussage immer</div><div class="task-meta"><span class="task-tag">Woche 3</span></div></div></div>
+      <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">Fr: Ersten Testimonial-Post vorbereiten — echtes Zitat, richtiger Kontext, kein Fake</div><div class="task-meta"><span class="task-tag">Woche 3</span></div></div></div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="week4">
+    <table class="ctable">
+      <tr><th>Tag</th><th>Kanal</th><th>Format</th><th>Thema</th><th>Ziel</th></tr>
+      <tr><td class="day">Mo</td><td class="platform">LinkedIn</td><td>Vergleich</td><td>"Introki vs. HubSpot: Was KMUs wirklich brauchen"</td><td><span class="goal-tag">Conversion</span></td></tr>
+      <tr><td class="day">Di</td><td class="platform">Instagram</td><td>Reel</td><td>Rollenbasiertes Dashboard: Setter-Ansicht</td><td><span class="goal-tag">Demo</span></td></tr>
+      <tr><td class="day">Mi</td><td class="platform">LinkedIn</td><td>Milestone</td><td>"30 Tage Building in Public: Was wir gelernt haben"</td><td><span class="goal-tag">Trust</span></td></tr>
+      <tr><td class="day">Do</td><td class="platform">Instagram</td><td>Carousel</td><td>"5 Features die kein anderes CRM hat" · BW Serie</td><td><span class="goal-tag">Reichweite</span></td></tr>
+      <tr><td class="day">Fr</td><td class="platform">LinkedIn</td><td>CTA-Post</td><td>"Kostenlos starten — was haelt dich noch?"</td><td><span class="goal-tag">Conversions</span></td></tr>
+      <tr><td class="day">Sa</td><td class="platform">Instagram</td><td>Reel</td><td>30-Tage Rueckblick · Authentic Founder-Story</td><td><span class="goal-tag">Brand</span></td></tr>
+    </table>
+    <div class="tg">
+      <div class="tg-header">Woche 4 Aufgaben</div>
+      <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">Mo: HubSpot-Vergleich Post — nicht angreifend, sachlich, mit konkreten Zahlen</div><div class="task-meta"><span class="task-tag">Woche 4</span></div></div></div>
+      <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">Mi: 30-Tage-Rueckblick schreiben — ehrlich, Zahlen teilen, Community danken</div><div class="task-meta"><span class="task-tag">Woche 4</span></div></div></div>
+      <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">Fr: CTA-Post mit Demo-Buchungslink — Calendly direkt in Featured Section verlinkt</div><div class="task-meta"><span class="task-tag">Woche 4</span></div></div></div>
+    </div>
+  </div>
+  <button class="complete-btn" id="completeBtn-s5" onclick="completeSection('s5')">✓ Modul als abgeschlossen markieren</button>
+</div>
+
+<!-- ══ 06 POSTS ══ -->
+<div class="section" id="s6">
+  <div class="sh">
+    <div class="sh-left">
+      <div class="sh-eyebrow">06 / 07 · Fertige Templates</div>
+      <div class="sh-title">Posts That Stop the Scroll</div>
+      <div class="sh-desc">3 sofort einsetzbare LinkedIn-Posts. Copy-Paste ready.</div>
+    </div>
+    <div class="sh-right">
+      <span class="sh-counter" id="counter-s6">0/0</span>
+      <span class="sh-badge badge-todo" id="badge-s6">Todo</span>
+    </div>
+  </div>
+
+  <div class="post-box">
+    <div class="pb-header">
+      <div class="pb-title">POST A · Problem-Awareness · Setter-Closer</div>
+      <div class="pb-actions">
+        <span class="pb-tag">Reichweite · Kommentare</span>
+        <button class="copy-btn" onclick="copyPost('postA',this)">Kopieren</button>
+      </div>
+    </div>
+    <div class="pb-body" id="postA">Dein Setter hat gerade den besten Lead des Monats qualifiziert.
+
+Dein Closer weiss es nicht.
+
+Nicht weil er schlaeft. Nicht weil er faul ist.
+Sondern weil die Uebergabe ueber WhatsApp lief — und die Nachricht unterging.
+
+So verlieren Vertriebsteams Deals.
+Nicht durch schlechte Verkaeufer. Durch kaputte Uebergaben.
+
+Der Closer ruft an. Weiss nichts. Wirkt unvorbereitet.
+Der Lead spuert es sofort.
+
+Das Vertrauen, das der Setter in 20 Minuten aufgebaut hat — in 90 Sekunden weg.
+
+Die meisten nennen das ein Kommunikationsproblem.
+Es ist ein Strukturproblem.
+
+Technik, Prozess oder Mensch — wo verliert ihr gerade Deals?</div>
+    <div class="pb-hashtags">#Vertrieb #SalesProcess #B2BSales #CRM #Mittelstand</div>
+  </div>
+
+  <div class="post-box">
+    <div class="pb-header">
+      <div class="pb-title">POST B · Kontra-Take · HubSpot</div>
+      <div class="pb-actions">
+        <span class="pb-tag">Reichweite · Diskussion</span>
+        <button class="copy-btn" onclick="copyPost('postB',this)">Kopieren</button>
+      </div>
+    </div>
+    <div class="pb-body" id="postB">HubSpot ist nicht fuer dich gebaut.
+
+Es ist fuer Unternehmen mit 200 Mitarbeitern und einem dedizierten Marketing-Ops-Team gebaut.
+
+Fuer ein 10-Mann-Team bedeutet HubSpot:
+— Setup-Agentur: €2.000-10.000
+— Echte Features: €800+/Monat
+— Jahresvertrag: Kein Rueckweg
+— US-Server: DSGVO-Grauzone
+
+Du bezahlst Enterprise-Preise fuer KMU-Probleme.
+
+Was nervt euch am meisten an eurem aktuellen CRM?</div>
+    <div class="pb-hashtags">#CRM #HubSpot #Mittelstand #B2BSales #SaaS</div>
+  </div>
+
+  <div class="post-box">
+    <div class="pb-header">
+      <div class="pb-title">POST C · Market Insight · Daten</div>
+      <div class="pb-actions">
+        <span class="pb-tag">Autoritaet · Trust</span>
+        <button class="copy-btn" onclick="copyPost('postC',this)">Kopieren</button>
+      </div>
+    </div>
+    <div class="pb-body" id="postC">68% der deutschen KMUs haben kein funktionierendes CRM.
+
+Nicht weil sie keines haben.
+Sondern weil das Team es nicht nutzt.
+
+Der Unterschied:
+Ein CRM das gespeichert werden will.
+Und ein System das den Prozess erzwingt.
+
+Keine Software der Welt rettet einen schlechten Prozess.
+Aber das richtige System macht einen guten Prozess automatisch.
+
+Wie viele eurer Mitarbeiter nutzen euer CRM wirklich taeglich?</div>
+    <div class="pb-hashtags">#Digitalisierung #CRM #Mittelstand #Vertrieb</div>
+  </div>
+
+  <div class="tg">
+    <div class="tg-header">Post-Checkliste</div>
+    <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">Post A gepostet — Datum notieren, Kommentare in erster Stunde beantworten</div><div class="task-meta"><span class="task-tag">Post A</span></div></div></div>
+    <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">Post B gepostet — Mindestens 48h Abstand zu Post A</div><div class="task-meta"><span class="task-tag">Post B</span></div></div></div>
+    <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">Post C gepostet — Als Daten-Post ideal fuer Montag Morgen 08:30 Uhr</div><div class="task-meta"><span class="task-tag">Post C</span></div></div></div>
+    <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">Performance nach 48h messen: Impressionen, Kommentare, Profilaufrufe vergleichen</div><div class="task-meta"><span class="task-tag">Analytics</span></div></div></div>
+  </div>
+  <button class="complete-btn" id="completeBtn-s6" onclick="completeSection('s6')">✓ Modul als abgeschlossen markieren</button>
+</div>
+
+<!-- ══ 07 MONETIZATION ══ -->
+<div class="section" id="s7">
+  <div class="sh">
+    <div class="sh-left">
+      <div class="sh-eyebrow">07 / 07 · Monetarisierung</div>
+      <div class="sh-title">Audience Monetization Strategy</div>
+      <div class="sh-desc">Conversion-Funnel, Pricing, Content-Angles und 30-60-90 Tage Ziele.</div>
+    </div>
+    <div class="sh-right">
+      <span class="sh-counter" id="counter-s7">0/0</span>
+      <span class="sh-badge badge-todo" id="badge-s7">Todo</span>
+    </div>
+  </div>
+
+  <div class="tg"><div class="tg-header">Conversion-Funnel</div></div>
+  <div class="funnel-row">
+    <div class="funnel-block"><div class="fb-label">Top of Funnel</div><div class="fb-title">Awareness</div><div class="fb-desc">Problem-Posts, Kontra-Takes, Markt-Insights</div><div class="fb-channel">LinkedIn + Instagram</div></div>
+    <div class="funnel-block"><div class="fb-label">Middle of Funnel</div><div class="fb-title">Trust</div><div class="fb-desc">Demo-Content, Building in Public, Testimonials</div><div class="fb-channel">LinkedIn + YouTube</div></div>
+    <div class="funnel-block"><div class="fb-label">Bottom of Funnel</div><div class="fb-title">Action</div><div class="fb-desc">Lead-Magnet, Free Trial CTA, Demo-Buchung</div><div class="fb-channel">Featured + Website</div></div>
+    <div class="funnel-block"><div class="fb-label">Retention</div><div class="fb-title">Customer</div><div class="fb-desc">Onboarding-Content, Feature-Releases, Community</div><div class="fb-channel">Newsletter + LinkedIn</div></div>
+  </div>
+
+  <div class="tg"><div class="tg-header">Angebotsstruktur</div></div>
+  <div class="pricing-row">
+    <div class="plan"><div class="plan-name">Free Plan</div><div class="plan-price">€0</div><div class="plan-desc">Max. 2 User · Basis-Features · Lead-Magnet-Gate</div></div>
+    <div class="plan"><div class="plan-name">Growth</div><div class="plan-price">€49</div><div class="plan-desc">5 User · Workflow-Builder · KI-Scoring</div></div>
+    <div class="plan"><div class="plan-name">Team</div><div class="plan-price">€99–389</div><div class="plan-desc">10-25 User · Alle Features · Power Dialer</div></div>
+    <div class="plan"><div class="plan-name">Enterprise</div><div class="plan-price">Custom</div><div class="plan-desc">25+ User · SLA · Custom Integrations</div></div>
+  </div>
+
+  <div class="tg"><div class="tg-header">30-60-90 Tage Meilensteine</div></div>
+  <div class="milestone-row">
+    <div class="ms"><div class="ms-period">30 Tage</div><div class="ms-item">10 aktive Free-Trial-User</div><div class="ms-item">3 Demo-Anfragen/Woche</div><div class="ms-item">250 LinkedIn-Verbindungen</div></div>
+    <div class="ms"><div class="ms-period">60 Tage</div><div class="ms-item">50 aktive User</div><div class="ms-item">15% Free-to-Paid</div><div class="ms-item">500 Verbindungen</div></div>
+    <div class="ms"><div class="ms-period">90 Tage</div><div class="ms-item">100 aktive User</div><div class="ms-item">20% Paid-Conversion</div><div class="ms-item">1.000 Verbindungen</div></div>
+  </div>
+
+  <div class="tg">
+    <div class="tg-header">Monetization Checkliste</div>
+    <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">Lead-Magnet PDF ("5 Gruende warum dein CRM ignoriert wird") in LinkedIn Featured Section einbinden</div><div class="task-meta"><span class="task-tag">Lead-Gen</span><span class="task-tag">Sofort</span></div></div></div>
+    <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">Calendly-Link fuer Demo-Buchungen in LinkedIn Featured Section + Bio einfuegen</div><div class="task-meta"><span class="task-tag">Conversion</span></div></div></div>
+    <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">Free Trial CTA auf Website prominent platzieren — "Kostenlos starten, ohne Kreditkarte"</div><div class="task-meta"><span class="task-tag">Website</span></div></div></div>
+    <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">ROI-Rechner Content erstellen: "5er-Team zahlt €560/Monat fuer Tools — oder €49 fuer Introki"</div><div class="task-meta"><span class="task-tag">Content-Angle</span></div></div></div>
+    <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">Newsletter aufsetzen — erster Versand: Woche 2 nach Launch, 300-500 Woerter, kein Pitch</div><div class="task-meta"><span class="task-tag">Newsletter</span></div></div></div>
+    <div class="task" onclick="toggleTask(this)"><div class="task-cb"></div><div class="task-body"><div class="task-title">30-Tage Tracking-Sheet anlegen: User, Demos, Conversions, LinkedIn-Wachstum woechentlich</div><div class="task-meta"><span class="task-tag">Tracking</span></div></div></div>
+  </div>
+  <button class="complete-btn" id="completeBtn-s7" onclick="completeSection('s7')">✓ Modul als abgeschlossen markieren</button>
+</div>
+
+</div><!-- /main -->
+</div><!-- /layout -->
+
+<script>
+// ── STATE ──
+let state = {};
+try { state = JSON.parse(localStorage.getItem('introki-os') || '{}'); } catch(e) { state = {}; }
+
+// ── INIT ──
+window.addEventListener('DOMContentLoaded', () => {
+  restoreState();
+  updateGlobal();
+});
+
+function restoreState() {
+  document.querySelectorAll('.task').forEach((t, i) => {
+    if (state['task-' + i]) t.classList.add('done');
+  });
+  ['s1','s2','s3','s4','s5','s6','s7'].forEach(s => {
+    if (state['complete-' + s]) {
+      const btn = document.getElementById('completeBtn-' + s);
+      if (btn) { btn.classList.add('done'); btn.textContent = '✓ Abgeschlossen'; }
+      const badge = document.getElementById('badge-' + s);
+      if (badge) { badge.className = 'sh-badge badge-done'; badge.textContent = 'Done'; }
+      const dot = document.getElementById('dot-' + s);
+      if (dot) dot.classList.add('done');
+    }
+    updateSectionCounter(s);
+  });
+}
+
+function saveState() {
+  try { localStorage.setItem('introki-os', JSON.stringify(state)); } catch(e) {}
+}
+
+// ── TASK TOGGLE ──
+function toggleTask(el) {
+  el.classList.toggle('done');
+  document.querySelectorAll('.task').forEach((t, i) => {
+    state['task-' + i] = t.classList.contains('done');
+  });
+  saveState();
+  const sec = el.closest('.section');
+  if (sec) updateSectionCounter(sec.id);
+  updateGlobal();
+}
+
+// ── SECTION COUNTER ──
+function updateSectionCounter(sId) {
+  const sec = document.getElementById(sId);
+  if (!sec || sId === 's0') return;
+  const tasks  = sec.querySelectorAll('.task');
+  const done   = sec.querySelectorAll('.task.done');
+  const counter = document.getElementById('counter-' + sId);
+  if (counter) counter.textContent = done.length + '/' + tasks.length;
+  const badge = document.getElementById('badge-' + sId);
+  if (badge && !state['complete-' + sId]) {
+    if (done.length === 0)               { badge.className = 'sh-badge badge-todo';  badge.textContent = 'Todo'; }
+    else if (done.length < tasks.length) { badge.className = 'sh-badge badge-doing'; badge.textContent = 'In Progress'; }
+    else                                 { badge.className = 'sh-badge badge-done';  badge.textContent = 'Bereit'; }
+  }
+}
+
+// ── COMPLETE SECTION ──
+function completeSection(sId) {
+  state['complete-' + sId] = true;
+  saveState();
+  const btn = document.getElementById('completeBtn-' + sId);
+  if (btn) { btn.classList.add('done'); btn.textContent = '✓ Abgeschlossen'; }
+  const badge = document.getElementById('badge-' + sId);
+  if (badge) { badge.className = 'sh-badge badge-done'; badge.textContent = 'Done'; }
+  const dot = document.getElementById('dot-' + sId);
+  if (dot) dot.classList.add('done');
+  updateGlobal();
+}
+
+// ── GLOBAL PROGRESS ──
+function updateGlobal() {
+  const allTasks  = document.querySelectorAll('.task');
+  const doneTasks = document.querySelectorAll('.task.done');
+  const total = allTasks.length;
+  const done  = doneTasks.length;
+  const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+
+  const prog = document.getElementById('globalProg');
+  if (prog) prog.style.width = pct + '%';
+  const progText = document.getElementById('globalProgText');
+  if (progText) progText.textContent = done + ' / ' + total;
+
+  const dbDone = document.getElementById('db-done');
+  if (dbDone) dbDone.textContent = done;
+  const dbTotal = document.getElementById('db-total');
+  if (dbTotal) dbTotal.textContent = total;
+  const dbPct = document.getElementById('db-pct');
+  if (dbPct) dbPct.textContent = pct + '%';
+
+  const started = ['s1','s2','s3','s4','s5','s6','s7'].filter(s => {
+    const sec = document.getElementById(s);
+    return sec && sec.querySelectorAll('.task.done').length > 0;
+  }).length;
+  const dbMod = document.getElementById('db-modules');
+  if (dbMod) dbMod.textContent = started + '/7';
+}
+
+// ── NAVIGATION ──
+function showSection(id, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  const target = document.getElementById(id);
+  if (target) target.classList.add('active');
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  if (el) el.classList.add('active');
+}
+
+// ── TABS ──
+function switchTab(id, el) {
+  const section = el.closest('.section');
+  if (!section) return;
+  section.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  const tab = document.getElementById(id);
+  if (tab) tab.classList.add('active');
+  el.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ── COPY POST ──
+function copyPost(id, btn) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const text = el.textContent;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
+      btn.classList.add('copied'); btn.textContent = '✓ Kopiert';
+      setTimeout(() => { btn.classList.remove('copied'); btn.textContent = 'Kopieren'; }, 2000);
+    }).catch(() => fallbackCopy(text, btn));
+  } else {
+    fallbackCopy(text, btn);
+  }
+}
+
+function fallbackCopy(text, btn) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;opacity:0;';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    btn.classList.add('copied'); btn.textContent = '✓ Kopiert';
+    setTimeout(() => { btn.classList.remove('copied'); btn.textContent = 'Kopieren'; }, 2000);
+  } catch(e) {}
+  document.body.removeChild(ta);
+}
+</script>
+</body>
+</html>
